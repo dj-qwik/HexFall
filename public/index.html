@@ -621,6 +621,7 @@ const dummy = new THREE.Object3D();
 // ---- the pit, in the same clean candy style as the tower: smooth shapes, soft flat colors, glossy accents ----
 const softCol = (c1, c2, k) => new THREE.Color(c1).lerp(new THREE.Color(c2), Math.max(0, Math.min(1, k)));
 
+const _pitStart = scene.children.length;
 // pit floor: smooth, gently rolling clay-colored dirt with big soft light and dark patches
 const pitGeo = new THREE.PlaneGeometry(PIT_R * 2 + 6, PIT_R * 2 + 6, 140, 140); pitGeo.rotateX(-Math.PI / 2);
 {
@@ -656,9 +657,9 @@ pitFloor.position.y = SLIME_Y; pitFloor.receiveShadow = true; scene.add(pitFloor
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
   const wall = new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.45, clearcoat: 0.25, side: THREE.DoubleSide, envMapIntensity: 0.6 }));
-  wall.position.y = SLIME_Y + H / 2 - 0.6; wall.receiveShadow = true; scene.add(wall);
+  wall.position.y = SLIME_Y + H / 2 - 0.6; wall.receiveShadow = true; wall.userData.keep = true; scene.add(wall);
   const lip = new THREE.Mesh(new THREE.TorusGeometry(PIT_R + 0.3, 0.8, 24, 200), new THREE.MeshPhysicalMaterial({ color: 0xff74b4, roughness: 0.25, clearcoat: 0.9 }));
-  lip.rotation.x = Math.PI / 2; lip.position.y = GRASS_Y; lip.receiveShadow = true; lip.castShadow = true; scene.add(lip);
+  lip.rotation.x = Math.PI / 2; lip.position.y = GRASS_Y; lip.receiveShadow = true; lip.castShadow = true; lip.userData.keep = true; scene.add(lip);
 }
 // grass ring outside the pit: clean stadium lawn with mowed stripes
 {
@@ -666,7 +667,7 @@ pitFloor.position.y = SLIME_Y; pitFloor.receiveShadow = true; scene.add(pitFloor
   for (let i = 0; i < p.count; i++) { const a = Math.atan2(p.getY(i), p.getX(i)), c = new THREE.Color(Math.floor((a + Math.PI) / (Math.PI * 2) * 36) % 2 ? 0x86d462 : 0x76c655); col.push(c.r, c.g, c.b); }
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   const grass = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 }));
-  grass.rotation.x = -Math.PI / 2; grass.position.y = GRASS_Y + 0.02; grass.receiveShadow = true; scene.add(grass);
+  grass.rotation.x = -Math.PI / 2; grass.position.y = GRASS_Y + 0.02; grass.receiveShadow = true; grass.userData.keep = true; scene.add(grass);
 }
 // lumpy rocks, bones, skulls, chains and two giant spiked food bowls
 {
@@ -731,6 +732,8 @@ const TORCHES = [];
     TORCHES.push({ flame, core, light, seed: k * 1.7 });
   }
 }
+
+const PIT_OBJS = scene.children.slice(_pitStart).filter(o => !o.userData.keep);
 
 // stadium: pillars, rails, bunting, stands, crowd, light towers
 const pillarMat = new THREE.MeshStandardMaterial({ color: 0xff9a3c, roughness: 0.35 });
@@ -1218,38 +1221,15 @@ function updateTorches(t) {
     if (T.light) T.light.intensity = 1.1 + f * 0.5;
   });
 }
-// a sea of soft clouds sits over the pit in the menus and the intro, so nobody sees what's down there;
-// it drifts apart when the countdown starts
-const LID = { mesh: null, puffs: [], k: 1 };
-{
-  const geo = new THREE.SphereGeometry(1, 24, 16), puffs = [];
-  for (let x = -PIT_R - 1; x <= PIT_R + 1; x += 2.4) for (let z = -PIT_R - 1; z <= PIT_R + 1; z += 2.4) {
-    const jx = x + (hash(x, z) - 0.5) * 1.6, jz = z + (hash(z, x) - 0.5) * 1.6;
-    if (Math.hypot(jx, jz) > PIT_R + 0.8) continue;
-    puffs.push([jx, SLIME_Y + 3.2 + hash(jx, 7) * 1.2, jz, 2.0 + hash(jz, 3) * 1.3, hash(jx, jz) * 6.28]);
-  }
-  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xffe6f2, emissiveIntensity: 0.4 }), puffs.length);
-  const tint = [0xffffff, 0xfff0f7, 0xf2ecff].map(c => new THREE.Color(c));
-  puffs.forEach((_, i) => mesh.setColorAt(i, tint[i % 3]));
-  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.receiveShadow = true;
-  LID.mesh = mesh; LID.puffs = puffs; scene.add(mesh);
-}
-function updateLid(dt, t) {
-  const want = state === 'lobby' || state === 'intro' ? 1 : 0;
-  if (want === 1 && LID.k < 1) LID.k = 1;                       // snaps back for the next menu / round
-  else if (want === 0) LID.k = Math.max(0, LID.k - dt / 2.2);   // drifts apart over about two seconds
-  LID.mesh.visible = LID.k > 0;
-  if (!LID.mesh.visible) return;
-  const e = LID.k * LID.k * (3 - 2 * LID.k);
-  LID.puffs.forEach(([x, y, z, r, ph], i) => {
-    const out = 1 + (1 - e) * 0.25, bob = Math.sin(t * 0.8 + ph) * 0.15;
-    dummy.position.set(x * out, y + bob + (1 - e) * 2, z * out); dummy.rotation.set(0, 0, 0);
-    dummy.scale.set(r * e, r * 0.7 * e, r * e); dummy.updateMatrix(); LID.mesh.setMatrixAt(i, dummy.matrix);
-  });
-  LID.mesh.instanceMatrix.needsUpdate = true;
+// the pit and everything in it stays switched off in the menus and the intro, so the dogs are a surprise
+let pitShown = null;
+function updatePitVisibility() {
+  const show = state !== 'lobby' && state !== 'intro';
+  if (show === pitShown) return;
+  pitShown = show; PIT_OBJS.forEach(o => { o.visible = show; });
 }
 function pitTick(dt, t) {
-  updateLid(dt, t); updateDogs(dt, t); updateCorpses(dt, t); updateGore(dt); updateDust(dt); updateTorches(t); if (((t * 60) | 0) % 2 === 0) updateCrowd(t); }
+  updatePitVisibility(); updateDogs(dt, t); updateCorpses(dt, t); updateGore(dt); updateDust(dt); updateTorches(t); if (((t * 60) | 0) % 2 === 0) updateCrowd(t); }
 
 /* ----- landing dust ----- */
 const DUST = [];
@@ -1987,7 +1967,7 @@ function updateView(v, dt) {
   if (state === 'intro' && v.kind === 'main') {
     // sweep up the tower from the bottom floor, circling once and a half, and land on the normal view
     const u = Math.min(1, introT / INTRO), e = u * u * (3 - 2 * u);
-    // starts just above the bottom floor, tipped up at the tower, over a sea of clouds hiding the pit
+    // starts just above the bottom floor, tipped up at the tower; the pit is switched off until the countdown
     const y0 = layerY(LAYERS - 1) + 7.5, p0 = -0.3;
     const tgt = new THREE.Vector3(c.x * e, y0 + (c.y - y0) * e, c.z * e);
     v.target.copy(tgt); v.dist = 22 + (d - 22) * e;
