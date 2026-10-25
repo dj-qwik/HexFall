@@ -1181,6 +1181,7 @@ function updateDogs(dt, t) {
     const rr = Math.hypot(d.x, d.z); if (rr > PIT_R - 3.5) { d.x *= (PIT_R - 3.5) / rr; d.z *= (PIT_R - 3.5) / rr; }
     // animate
     const m = d.m, run = Math.min(1, d.spd / 6), gallop = d.spd > 7;
+    m.root.visible = state !== 'lobby' && state !== 'intro';
     d.phase += dt * (2.2 + d.spd * 0.9);
     m.root.position.set(d.x, groundY(d.x, d.z) + (gallop ? Math.abs(Math.sin(d.phase)) * 0.35 : 0), d.z); m.root.rotation.y = d.yaw;
     m.legs.forEach((L, i) => {
@@ -1953,11 +1954,13 @@ function updateView(v, dt) {
   d *= v.zoom;
   c.y = Math.max(c.y, SLIME_Y + 3) + 0.4;
   if (state === 'intro' && v.kind === 'main') {
-    // sweep up the tower from the dog pit, circling once and a half, and land on the normal view
+    // sweep up the tower from the bottom floor, circling once and a half, and land on the normal view
     const u = Math.min(1, introT / INTRO), e = u * u * (3 - 2 * u);
-    const tgt = new THREE.Vector3(c.x * e, SLIME_Y + 2 + (c.y - SLIME_Y - 2) * e, c.z * e);
+    // starts level with the bottom floor, looking up at the tower, so the pit below stays out of frame
+    const y0 = layerY(LAYERS - 1) + 5, p0 = -0.22;
+    const tgt = new THREE.Vector3(c.x * e, y0 + (c.y - y0) * e, c.z * e);
     v.target.copy(tgt); v.dist = 22 + (d - 22) * e;
-    camPose(v, tgt, v.yaw + (1 - e) * Math.PI * 3, 0.2 + (v.pitch - 0.2) * e, v.dist);
+    camPose(v, tgt, v.yaw + (1 - e) * Math.PI * 3, p0 + (v.pitch - p0) * e, v.dist);
   } else {
     v.target.lerp(c, 1 - Math.exp(-3.2 * dt)); v.dist += (d - v.dist) * (1 - Math.exp(-4 * dt));
     camPose(v, v.target, v.yaw, v.pitch, v.dist);
