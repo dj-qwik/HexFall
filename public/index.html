@@ -121,6 +121,9 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
 .codebox b{font-family:var(--display);font-weight:400;font-size:38px;letter-spacing:.2em;line-height:1;flex:1;color:var(--pink);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;}
 .note{margin:0;font-size:14px;line-height:1.45;color:var(--ink-soft);}
 .joinhint{font-size:13px;margin-top:-4px;}
+.slot.tap{cursor:pointer;border-color:var(--violet);border-style:solid;}
+.slot.tap .badge{color:var(--violet);border-color:var(--violet);}
+body.touchmode .joinhint{display:none;}
 .leave{position:absolute;top:-10px;right:-10px;width:28px;height:28px;border-radius:50%;border:3px solid var(--ink);background:#fff;
   font-size:18px;font-weight:700;line-height:1;padding:0;display:grid;place-items:center;box-shadow:0 3px 0 var(--ink);transition:transform .15s,background .15s;}
 .leave:hover{background:var(--pink);color:#fff;transform:scale(1.12) rotate(90deg);}
@@ -180,6 +183,29 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
 .vlabel .mini::before{left:6px}.vlabel .mini::after{right:6px}
 .vout{position:absolute;left:50%;top:14px;transform:translateX(-50%) rotate(-2deg);background:var(--ink);color:#fff;font-family:var(--display);
   font-size:clamp(18px,2.6vw,28px);padding:8px 18px;border-radius:14px;border:3px solid #fff;white-space:nowrap;}
+/* ---------- touch controls ---------- */
+#touch{position:fixed;inset:0;pointer-events:none;z-index:5;}
+#stickZone{position:absolute;left:0;bottom:0;width:48%;height:62%;pointer-events:auto;touch-action:none;}
+#stick{position:absolute;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;border:3px solid rgba(42,22,80,.75);
+  background:rgba(255,255,255,.28);box-shadow:0 0 0 6px rgba(255,255,255,.18);pointer-events:none;}
+#stick i{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:var(--paper);
+  border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink);}
+.tbtns{position:absolute;right:max(18px,calc(env(safe-area-inset-right,0px) + 12px));bottom:max(22px,calc(env(safe-area-inset-bottom,0px) + 16px));
+  width:200px;height:190px;pointer-events:none;}
+.tb{position:absolute;pointer-events:auto;touch-action:none;border:3px solid var(--ink);border-radius:50%;font-family:var(--display);font-weight:400;
+  color:var(--ink);box-shadow:0 5px 0 var(--ink);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;padding:0;}
+.tb.jump{right:0;bottom:0;width:96px;height:96px;font-size:22px;background:var(--sun);}
+.tb.dive{right:104px;bottom:6px;width:70px;height:70px;font-size:17px;background:#ff8fbf;}
+.tb.grab{right:22px;bottom:110px;width:70px;height:70px;font-size:17px;background:#9fd3ff;}
+.tb.on{transform:translateY(4px) scale(.95);box-shadow:0 1px 0 var(--ink);}
+.tpause{position:absolute;pointer-events:auto;left:max(16px,env(safe-area-inset-left,0px));top:max(72px,calc(env(safe-area-inset-top,0px) + 66px));
+  width:44px;height:44px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);box-shadow:0 4px 0 var(--ink);display:grid;place-items:center;padding:0;}
+.tpause svg{width:20px;height:20px;stroke:var(--ink);stroke-width:3.4;stroke-linecap:round;fill:none;}
+.thint{position:absolute;left:50%;top:max(78px,calc(env(safe-area-inset-top,0px) + 72px));transform:translateX(-50%);margin:0;white-space:nowrap;
+  font-weight:600;font-size:13px;color:#fff;background:rgba(42,22,80,.75);border-radius:999px;padding:5px 12px;transition:opacity .6s;}
+body.touchmode #chips{display:none;}
+body.touchmode .banner span{font-size:16px;}
+body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 /* ---------- tags over heads ---------- */
 #tags{position:fixed;inset:0;pointer-events:none;overflow:hidden;}
 .tag{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;will-change:transform;}
@@ -303,6 +329,7 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
           <div class="ctl"><strong>Keyboard 2</strong><kbd class="k">Arrows</kbd> move <kbd class="k">/</kbd> join / jump <kbd class="k">.</kbd> dive <kbd class="k">,</kbd> grab</div>
           <div class="ctl"><strong>Anywhere</strong><kbd class="k">F</kbd> fullscreen <kbd class="k">M</kbd> music <kbd class="k">B</kbd> / <kbd class="k">Backspace</kbd> leave <kbd class="k">C</kbd> / <kbd class="k">Y</kbd> CPU fill <kbd class="k">V</kbd> / <kbd class="k">X</kbd> CPU skill</div>
           <div class="ctl"><strong>Mouse</strong>Drag to look around, scroll to zoom</div>
+          <div class="ctl"><strong>Phone / tablet</strong>Controls appear on screen. Thumb on the left to move, drag the right side to look.</div>
           <div class="ctl"><strong>Online</strong>Any keyboard layout or controller moves your character.</div>
         </div>
       </details>
@@ -343,6 +370,17 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
     <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
   </button>
   <div id="toast" role="status"></div>
+  <div id="touch" hidden>
+    <div id="stickZone" aria-label="Move"></div>
+    <div id="stick" hidden><i></i></div>
+    <div class="tbtns">
+      <button class="tb grab" id="tGrab" type="button" aria-label="Grab">Grab</button>
+      <button class="tb dive" id="tDive" type="button" aria-label="Dive">Dive</button>
+      <button class="tb jump" id="tJump" type="button" aria-label="Jump">Jump</button>
+    </div>
+    <button class="tpause" id="tPause" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+    <p class="thint" id="tHint">Drag left side to move · drag right side to look</p>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -771,10 +809,74 @@ function readInput(p) {
   }
   return i;
 }
+/* ================= touch controls ================= */
+// Phones and tablets get an on-screen stick and buttons. They appear automatically on a touch
+// screen and step aside again if a keyboard or mouse gets used.
+const TOUCH = { mx: 0, mz: 0, jump: false, dive: false, grab: false };
+let touchMode = false;
+try { touchMode = matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
+const smallScreen = () => Math.min(window.innerWidth, window.innerHeight) < 620;
+function setTouchMode(on) {
+  if (on === touchMode) return;
+  touchMode = on; document.body.classList.toggle('touchmode', on);
+  if (state === 'lobby') renderLobby();
+}
+function hasTouchPlayer() {
+  if (NET.room) return players.some(p => p.isMe);
+  return players.some(p => p.kind === 'touch');
+}
+function updateTouchUI() {
+  const show = touchMode && ['intro', 'countdown', 'play'].includes(state) && !paused && hasTouchPlayer();
+  const el = $('#touch'); if (el.hidden === show) el.hidden = !show;
+  if (!show) { TOUCH.mx = TOUCH.mz = 0; TOUCH.jump = TOUCH.dive = TOUCH.grab = false; }
+  $('#tPause').hidden = !!NET.room;
+  $('#tHint').style.opacity = state === 'intro' || (state === 'countdown') || roundT < 4 ? 1 : 0;
+}
+{
+  const zone = $('#stickZone'), stick = $('#stick'), knob = stick.querySelector('i'), R = 54;
+  let id = null, ox = 0, oy = 0;
+  const move = e => {
+    let dx = e.clientX - ox, dy = e.clientY - oy; const d = Math.hypot(dx, dy);
+    if (d > R) { dx *= R / d; dy *= R / d; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    const m = Math.min(1, d / R); TOUCH.mx = d > 6 ? dx / R : 0; TOUCH.mz = d > 6 ? dy / R : 0;
+    if (m < 0.12) TOUCH.mx = TOUCH.mz = 0;
+  };
+  zone.addEventListener('pointerdown', e => {
+    if (id !== null) return; id = e.pointerId; ox = e.clientX; oy = e.clientY;
+    stick.style.left = ox + 'px'; stick.style.top = oy + 'px'; stick.hidden = false; knob.style.transform = '';
+    try { zone.setPointerCapture(id); } catch (err) {}
+    initAudio(); e.preventDefault();
+  });
+  zone.addEventListener('pointermove', e => { if (e.pointerId === id) move(e); });
+  const end = e => { if (e.pointerId !== id) return; id = null; stick.hidden = true; TOUCH.mx = TOUCH.mz = 0; };
+  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
+  const hold = (btn, k) => {
+    const on = e => {
+      e.preventDefault(); initAudio(); TOUCH[k] = true; btn.classList.add('on');
+      try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+      if (k === 'jump' && state === 'intro' && !(NET.room && NET.role === 'guest')) introT = INTRO;
+    };
+    const off = () => { TOUCH[k] = false; btn.classList.remove('on'); };
+    btn.addEventListener('pointerdown', on);
+    btn.addEventListener('pointerup', off); btn.addEventListener('pointercancel', off); btn.addEventListener('lostpointercapture', off);
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  };
+  hold($('#tJump'), 'jump'); hold($('#tDive'), 'dive'); hold($('#tGrab'), 'grab');
+  $('#tPause').addEventListener('click', () => setPaused(true));
+  window.addEventListener('touchstart', () => setTouchMode(true), { passive: true });
+  window.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && (Math.abs(e.movementX) + Math.abs(e.movementY)) > 2) setTouchMode(false); });
+  document.body.classList.toggle('touchmode', touchMode);
+  // phones: render a bit lighter so it stays smooth
+  if (touchMode && smallScreen()) {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); sun.shadow.mapSize.set(1024, 1024); resize();
+  }
+}
+
 function readRaw(p) {
   if (p.kind === 'cpu') return botInput(p);
   if (p.kind === 'any') {
-    const all = [readKind({ kind: 'kb1' }), readKind({ kind: 'kb2' })];
+    const all = [readKind({ kind: 'kb1' }), readKind({ kind: 'kb2' }), readKind({ kind: 'touch' })];
     pads.forEach((gp, i) => { if (gp) all.push(readKind({ kind: 'pad', pad: i })); });
     const o = { mx: 0, mz: 0, jump: false, dive: false, grab: false };
     all.forEach(a => { o.mx += a.mx; o.mz += a.mz; o.jump = o.jump || a.jump; o.dive = o.dive || a.dive; o.grab = o.grab || a.grab; });
@@ -791,6 +893,8 @@ function readKind(p) {
   } else if (p.kind === 'kb2') {
     inp.mx = (K.ArrowRight ? 1 : 0) - (K.ArrowLeft ? 1 : 0); inp.mz = (K.ArrowDown ? 1 : 0) - (K.ArrowUp ? 1 : 0);
     inp.jump = !!K.Slash; inp.dive = !!K.Period; inp.grab = !!K.Comma;
+  } else if (p.kind === 'touch') {
+    inp.mx = TOUCH.mx; inp.mz = TOUCH.mz; inp.jump = TOUCH.jump; inp.dive = TOUCH.dive; inp.grab = TOUCH.grab;
   } else if (p.kind === 'pad') {
     const gp = pads[p.pad];
     if (gp) {
@@ -1164,9 +1268,9 @@ function setSplit(on) {
     views = humans.map(p => { if (!p.view) { p.view = makeView('player', p); p.view.target.copy(p.pos); } return p.view; });
     if (views.length === 3) { const o = makeView('overview', null); o.target.set(0, layerY(2), 0); o.dist = 46; o.pitch = 0.5; views.push(o); }
   } else views = [mainView];
-  const pr = views.length > 1 ? Math.min(window.devicePixelRatio || 1, 1.3) : Math.min(window.devicePixelRatio || 1, 2);
+  const pr = views.length > 1 ? Math.min(window.devicePixelRatio || 1, 1.3) : Math.min(window.devicePixelRatio || 1, touchMode && smallScreen() ? 1.5 : 2);
   if (renderer.getPixelRatio() !== pr) { renderer.setPixelRatio(pr); resize(); }
-  const ms = views.length > 2 ? 1024 : 2048;
+  const ms = views.length > 2 || (touchMode && smallScreen()) ? 1024 : 2048;
   if (sun.shadow.mapSize.x !== ms) { sun.shadow.mapSize.set(ms, ms); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
   renderFrames();
 }
@@ -1321,7 +1425,7 @@ function updateTags() {
   });
 }
 const mini = def => `<span class="mini" style="--b:${hex(def.body)};--p:${def.css}"></span>`;
-const KIND_TEXT = { kb1: 'WASD keys', kb2: 'Arrow keys' };
+const KIND_TEXT = { kb1: 'WASD keys', kb2: 'Arrow keys', touch: 'Touch controls' };
 let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
 
@@ -1378,13 +1482,15 @@ function renderLobby() {
   // each open card names a different way in that nobody has used yet:
   // the two keyboard layouts, then each connected controller
   const ways = [];
-  if (!joined.some(j => j.kind === 'kb1')) ways.push('Space · WASD');
+  const tapJoin = touchMode && !joined.some(j => j.kind === 'touch');
+  if (!joined.some(j => j.kind === 'kb1') && !touchMode) ways.push('Space · WASD');
   if (!joined.some(j => j.kind === 'kb2')) ways.push('/ · arrow keys');
   pads.forEach((gp, pi) => { if (gp && !joined.some(j => j.kind === 'pad' && j.pad === pi)) ways.push(`A on pad ${pi + 1}`); });
   let w = 0;
   for (let i = 0; i < 4; i++) {
     const s = roster[i];
-    if (!s) html += slotHTML(i, null, w < ways.length ? 'Press ' + ways[w++] : 'Plug in a controller');
+    if (!s && tapJoin && i === roster.length) html += slotHTML(i, null, 'Tap here to play').replace('class="slot empty"', 'class="slot empty tap" data-join="touch" role="button" tabindex="0"');
+    else if (!s) html += slotHTML(i, null, w < ways.length ? 'Press ' + ways[w++] : touchMode ? 'Connect a controller' : 'Plug in a controller');
     else html += slotHTML(i, s.name, s.kind === 'cpu' ? 'Computer player' : s.kind === 'pad' ? 'Controller ' + (s.pad + 1) : KIND_TEXT[s.kind],
       s.kind === 'cpu' ? '' : s.kind === 'pad' ? 'or press B' : 'or Backspace');
   }
@@ -1483,6 +1589,7 @@ function startRound() {
     beginRoundUI();
     return;
   }
+  if (!joined.length && touchMode) join('touch');
   if (!joined.length) { toast('Press A on a controller, or Space, to join first.'); return; }
   resetArena((Math.random() * 1e9) | 0);
   players = joined.map((j, i) => makePlayer(i, j.kind, j.pad));
@@ -1861,6 +1968,7 @@ $('#startBtn').addEventListener('click', startRound);
 $('#cpuBtn').addEventListener('click', toggleCpu);
 $('#netCpuBtn').addEventListener('click', toggleCpu);
 $('#slots').addEventListener('click', e => {
+  if (e.target.closest('[data-join="touch"]') && !e.target.closest('[data-leave]')) { initAudio(); join('touch'); return; }
   const b = e.target.closest('[data-leave]'); if (!b) return;
   const j = joined[+b.dataset.leave]; if (j) leave(x => x === j);
 });
@@ -1913,6 +2021,7 @@ window.addEventListener('gamepaddisconnected', () => { if (state === 'lobby') { 
 window.addEventListener('keyup', e => { K[e.code] = false; });
 window.addEventListener('keydown', e => {
   initAudio();
+  if (!e.repeat && e.key && e.key.length === 1) setTouchMode(false);
   const typing = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
   if (typing) { if (e.code === 'Enter' || e.code === 'NumpadEnter') netEnter($('#codeIn').value, 'guest'); return; }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Slash', 'Backspace'].includes(e.code)) e.preventDefault();
@@ -1980,6 +2089,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
   popBudget = Math.max(0, popBudget - dt);
   musicTick(dt);
+  updateTouchUI();
   const padCount = pads.filter(Boolean).length;
   pollPads(); handlePads();
   if (state === 'lobby' && NET.mode === 'local' && pads.filter(Boolean).length !== padCount) renderLobby();
