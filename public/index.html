@@ -430,9 +430,9 @@ function resize() {
 }
 window.addEventListener('resize', resize); resize();
 
-scene.add(new THREE.HemisphereLight(0xeaf6ff, 0xf3b6d4, 0.55));
-const rimLight = new THREE.DirectionalLight(0xbfe2ff, 0.5); rimLight.position.set(-20, 18, -26); scene.add(rimLight);
-const sun = new THREE.DirectionalLight(0xfff0dc, 1.0);
+scene.add(new THREE.HemisphereLight(0xeaf6ff, 0xf3b6d4, 0.42));
+const rimLight = new THREE.DirectionalLight(0xbfe2ff, 0.35); rimLight.position.set(-20, 18, -26); scene.add(rimLight);
+const sun = new THREE.DirectionalLight(0xfff0dc, 0.82);
 sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 90 });
 sun.shadow.camera.updateProjectionMatrix();
@@ -482,7 +482,7 @@ const layers = [];
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _qt = new THREE.Quaternion(), _s = new THREE.Vector3(), _c = new THREE.Color();
 const WHITE = new THREE.Color(0xffffff);
 for (let L = 0; L < LAYERS; L++) {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.32, metalness: 0, vertexColors: true, envMapIntensity: 0.9, transparent: false });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.32, metalness: 0, vertexColors: true, envMapIntensity: 0.55, transparent: false });
   const mesh = new THREE.InstancedMesh(TILE_GEO, mat, AX.length);
   mesh.castShadow = true; mesh.receiveShadow = true;
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -603,7 +603,7 @@ const dummy = new THREE.Object3D();
 // soft studio reflections for every glossy surface
 (function env() {
   const es = new THREE.Scene(), g = new THREE.SphereGeometry(50, 32, 16), col = [];
-  const top = new THREE.Color(0x6fbfff), mid = new THREE.Color(0xfff2fa), low = new THREE.Color(0x7a5a4c), pos = g.attributes.position;
+  const top = new THREE.Color(0x4f8fc4), mid = new THREE.Color(0xb9b2bd), low = new THREE.Color(0x5a4239), pos = g.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const y = pos.getY(i) / 50, c = y > 0 ? mid.clone().lerp(top, Math.min(1, y * 1.5)) : mid.clone().lerp(low, Math.min(1, -y * 2));
     col.push(c.r, c.g, c.b);
@@ -611,7 +611,7 @@ const dummy = new THREE.Object3D();
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   es.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
   [[22, 32, 26, 1], [-36, 18, -12, 0.6], [5, 40, -30, 0.5]].forEach(([x, y, z, s]) => {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(30 * s, 18 * s), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(30 * s, 18 * s), new THREE.MeshBasicMaterial({ color: 0xc8c8c8, side: THREE.DoubleSide }));
     p.position.set(x, y, z); p.lookAt(0, 0, 0); es.add(p);
   });
   const pm = new THREE.PMREMGenerator(renderer);
