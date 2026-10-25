@@ -207,6 +207,19 @@ body.touchmode .joinhint{display:none;}
 body.touchmode #chips{display:none;}
 body.touchmode .banner span{font-size:16px;}
 body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
+/* ---------- last-words speech bubbles ---------- */
+#bubbles{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:3;}
+.bubble{position:absolute;left:0;top:0;will-change:transform;}
+.bubble span{display:block;max-width:min(260px,60vw);padding:10px 16px 11px;background:#fff;border:4px solid var(--ink);border-radius:22px;
+  box-shadow:0 5px 0 var(--ink);font-family:var(--display);font-size:clamp(17px,2.3vw,24px);line-height:1.1;color:var(--ink);text-align:center;
+  text-wrap:balance;transform:rotate(var(--tilt));transform-origin:50% 100%;animation:yell .45s cubic-bezier(.2,1.8,.4,1) both, shake .09s linear .45s 6 alternate;}
+.bubble span::after{content:"";position:absolute;left:50%;bottom:-17px;width:22px;height:22px;background:#fff;border-right:4px solid var(--ink);border-bottom:4px solid var(--ink);
+  transform:translateX(-50%) rotate(45deg) skew(10deg,10deg);border-radius:0 0 6px 0;}
+.bubble span::before{content:"";position:absolute;inset:4px;border-radius:16px;border:2px dashed var(--c);opacity:.35;pointer-events:none;}
+.bubble{transition:opacity .4s;}
+.bubble.fade{opacity:0;}
+@keyframes yell{0%{transform:scale(.2) rotate(-14deg);opacity:0}60%{transform:scale(1.12) rotate(var(--tilt))}100%{transform:scale(1) rotate(var(--tilt));opacity:1}}
+@keyframes shake{from{translate:-2px 0}to{translate:2px 0}}
 /* ---------- tags over heads ---------- */
 #tags{position:fixed;inset:0;pointer-events:none;overflow:hidden;}
 .tag{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;will-change:transform;}
@@ -251,6 +264,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 @media (prefers-reduced-motion:reduce){
   .logo span,.slot.filled .mini,.plus,.btn.primary:hover,.slot.pop,.skill-opts button{animation:none !important;}
   #big span.pop{animation-duration:.01s;}
+  .bubble span{animation:none;}
   #confetti{display:none;}
 }
 </style>
@@ -259,6 +273,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 <div id="vignette" aria-hidden="true"></div>
 <div id="frames" hidden></div>
 <div id="tags"></div>
+<div id="bubbles" aria-live="polite"></div>
 <div id="confetti"></div>
 <div id="ui">
   <section id="lobby" aria-label="Lobby">
@@ -1031,7 +1046,50 @@ function clearGore() {
   DROPS.forEach(d => { d.life = 0; d.m.visible = false; }); POOLS.forEach(p => { p.m.visible = false; });
   CHUNKS.forEach(c => { c.life = 0; c.m.visible = false; c.held = null; }); LIMBS.forEach(l => { l.life = 0; l.m.visible = false; l.held = null; });
   dogs.forEach(d => { d.carry = null; d.cp = null; if (d.mode !== 'pace') { d.mode = 'pace'; d.t = 0; } });
+  corpses.forEach(cp => { if (cp.bubble) cp.bubble.remove(); });
   corpses.length = 0;
+}
+// last words: a speech bubble pops up from whoever just landed in the pit
+const LAST_WORDS = [
+  'Holy Shit!!!', 'IS THAT A FUCKING DOG?!?', 'Why is this happening to ME?!?', 'Nope nope nope NOPE',
+  'Good boy? GOOD BOY?!', "I was told there'd be slime!", 'Not the face! NOT THE FACE!', 'Tell my mom I tried!',
+  'Who let the fucking dogs out?!', "I'm too squishy to die!", 'This is NOT a petting zoo!', 'Oh god, oh god, oh GOD!',
+  "Sit! SIT! Fuck, they don't sit!", 'I regret EVERYTHING', 'Can we talk about this?!', 'Mommy?!',
+  "I'm allergic to dying!", 'Well, shit.', 'Bad dog! BAD DOG!!', "I should've hopped!",
+  'Is it too late to forfeit?!', 'Somebody pause the game!!', "Who's a hungry boy? OH NO", "I'm not even crunchy!",
+  "That's not a chew toy, that's ME!", 'Fuck this game!', 'I had a whole life ahead of me!', 'Ctrl+Z! CTRL+Z!!',
+  "Wait, I'm the snack?!", 'Not like this... NOT LIKE THIS!', 'Rabies?! Seriously?!', 'Why are they so BIG?!',
+  'I want a refund!!', 'Does anyone have a treat?!', 'My legs! I NEED those!', 'This is fine. This is FINE!',
+  'Goddammit, Kevin!', 'I just wanted a crown!', 'Somebody call animal control!', 'Son of a BITCH!',
+];
+let wordBag = [];
+function lastWords() {
+  if (!wordBag.length) { wordBag = LAST_WORDS.slice(); for (let i = wordBag.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [wordBag[i], wordBag[j]] = [wordBag[j], wordBag[i]]; } }
+  return wordBag.pop();
+}
+const BUBBLE_TIME = 3.6;
+function sayLastWords(cp) {
+  const el = document.createElement('div'); el.className = 'bubble'; el.style.setProperty('--c', cp.p.def.css);
+  el.style.setProperty('--tilt', (Math.random() * 8 - 4).toFixed(1) + 'deg');
+  const span = document.createElement('span'); span.textContent = lastWords(); el.appendChild(span);
+  $('#bubbles').appendChild(el); cp.bubble = el;
+}
+function updateBubbles() {
+  const v3 = new THREE.Vector3();
+  corpses.forEach(cp => {
+    if (!cp.bubble) return;
+    const age = clock - cp.t;
+    if (age > BUBBLE_TIME || state === 'lobby') { cp.bubble.remove(); cp.bubble = null; return; }
+    // follow the body, in the dying player's own view when the screen is split
+    const v = splitOn && cp.p.view && views.includes(cp.p.view) ? cp.p.view : views[0];
+    const c = cp.p.ch.root.position; v3.set(c.x, c.y + 2.2, c.z);
+    if (!cp.p.ch.root.visible) v3.copy(cp.focus).y += 2;
+    v3.project(v.cam);
+    const r = v.rect, x = r.x + (v3.x + 1) / 2 * r.w, y = r.y + (1 - v3.y) / 2 * r.h;
+    cp.bubble.hidden = v3.z > 1;
+    cp.bubble.style.transform = `translate(${Math.max(r.x + 90, Math.min(r.x + r.w - 90, x))}px, ${Math.max(r.y + 60, y)}px) translate(-50%, -100%)`;
+    cp.bubble.classList.toggle('fade', age > BUBBLE_TIME - 0.4);
+  });
 }
 function resetChar(c) { c.arms.forEach(a => { a.visible = true; }); c.feet.forEach(f => { f.visible = true; }); c.tilt.rotation.set(0, 0, 0); c.sq.scale.set(1, 1, 1); }
 function addCorpse(p) {
@@ -1040,6 +1098,7 @@ function addCorpse(p) {
   c.tilt.rotation.set(-1.45, 0, 0); c.arms[0].rotation.set(0, 0, -1.4); c.arms[1].rotation.set(0, 0, 1.4);
   const cp = { p, x, z, t: clock, phase: 'wait', pt: 0, biter: null, helper: null, torn: 0, focus: new THREE.Vector3(x, groundY(x, z) + 0.6, z) };
   corpses.push(cp); p.corpse = cp; p.lingerUntil = clock + 30;
+  sayLastWords(cp);
   SFX.thud(); spurt(x, groundY(x, z) + 0.3, z, 12, 0.6);
 }
 // the slow part: bite and shake, a second dog joins, limbs come off one by one, then the body goes
@@ -2788,6 +2847,7 @@ function frame(now) {
   pitTick(paused ? 0 : dt, t);
   updateCameras(dt);
   updateTags();
+  updateBubbles();
   renderViews();
   requestAnimationFrame(frame);
 }
