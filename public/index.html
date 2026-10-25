@@ -1528,6 +1528,7 @@ const hasKb2 = () => joined.some(j => j.kind === 'kb2');
 
 /* ================= players & physics ================= */
 const GRAV = -30, RUN = 6.6, ACC_G = 55, ACC_A = 16, JUMP = 10.8, DIVE_H = 9.5;
+const COYOTE = 0.08; // seconds you can still jump after the tile under you is gone
 let players = [], joined = [], cpuFill = true;
 let state = 'lobby', paused = false, roundT = 0, cdT = 0, overT = 0, overReady = false, eliminated = [], winners = [], lastCd = -1;
 
@@ -1600,13 +1601,13 @@ function stepPlayer(p, inp, dt) {
     p.vel.x = approach(p.vel.x, inp.mx * speed, a);
     p.vel.z = approach(p.vel.z, inp.mz * speed, a);
     if (Math.hypot(inp.mx, inp.mz) > 0.15) p.targetYaw = Math.atan2(inp.mx, inp.mz);
-    if (jumpEdge && p.grounded) {
-      p.vel.y = JUMP; p.grounded = false; p.sqk = -0.2; p.sqv = 0; SFX.jump();
+    if (jumpEdge && (p.grounded || p.coyote > 0)) {
+      p.vel.y = JUMP; p.grounded = false; p.coyote = 0; p.sqk = -0.2; p.sqv = 0; SFX.jump();
     } else if (diveEdge) {
       const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
       p.vel.x = fx * DIVE_H; p.vel.z = fz * DIVE_H;
       p.vel.y = p.grounded ? 5.5 : Math.max(p.vel.y, 2.5);
-      p.diving = true; p.diveT = 0; p.grounded = false; releaseGrab(p); SFX.dive();
+      p.diving = true; p.diveT = 0; p.grounded = false; p.coyote = 0; releaseGrab(p); SFX.dive();
     }
   }
 
@@ -1637,6 +1638,9 @@ function stepPlayer(p, inp, dt) {
       }
     }
   }
+  // grace period: standing on a tile refills it; once the floor is gone it counts down, and only a
+  // fall that started from standing gets it (not the downward half of a jump)
+  if (p.grounded) p.coyote = COYOTE; else p.coyote = Math.max(0, (p.coyote || 0) - dt);
   if (p.pos.y < SLIME_Y + 0.2) eliminate(p);
 }
 
