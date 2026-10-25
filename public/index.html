@@ -618,128 +618,67 @@ const dummy = new THREE.Object3D();
   scene.environment = pm.fromScene(es, 0.03).texture; pm.dispose();
 })();
 
-// ---- procedural textures for the pit (drawn once on canvases) ----
-function noiseLayers(ctx, W, H, rnd, alpha, scales, gray) {
-  scales.forEach(sz => {
-    const c = document.createElement('canvas'); c.width = sz; c.height = Math.max(2, Math.round(sz * H / W));
-    const g = c.getContext('2d'), img = g.createImageData(c.width, c.height);
-    for (let i = 0; i < img.data.length; i += 4) { const v = rnd() * 255 | 0; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
-    g.putImageData(img, 0, 0);
-    ctx.globalAlpha = alpha; ctx.globalCompositeOperation = gray ? 'source-over' : 'overlay'; ctx.imageSmoothingEnabled = true;
-    // draw 3x3 so the tiling edges match up
-    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) ctx.drawImage(c, ox * W, oy * H, W, H);
-  });
-  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-}
-function canvasTex(W, H, draw, repeatX, repeatY) {
-  const make = gray => { const c = document.createElement('canvas'); c.width = W; c.height = H; draw(c.getContext('2d'), W, H, gray, rng32(1234)); return c; };
-  const map = new THREE.CanvasTexture(make(false)), bump = new THREE.CanvasTexture(make(true));
-  [map, bump].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeatX, repeatY); t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); });
-  return { map, bump };
-}
-const TEX_DIRT = canvasTex(512, 512, (g, W, H, gray, rnd) => {
-  g.fillStyle = gray ? '#7a7a7a' : '#5c3b26'; g.fillRect(0, 0, W, H);
-  noiseLayers(g, W, H, rnd, gray ? 0.35 : 0.5, [6, 14, 32, 80, 200], gray);
-  // pebbles and grit
-  for (let i = 0; i < 900; i++) {
-    const x = rnd() * W, y = rnd() * H, r = 1 + rnd() * rnd() * 7, l = 30 + rnd() * 45;
-    g.fillStyle = gray ? `hsl(0,0%,${55 + rnd() * 40}%)` : `hsl(${22 + rnd() * 14},${18 + rnd() * 25}%,${l * 0.7}%)`;
-    g.beginPath(); g.ellipse(x, y, r, r * (0.6 + rnd() * 0.4), rnd() * 3, 0, 7); g.fill();
-    if (!gray && r > 3) { g.fillStyle = 'rgba(255,240,220,.18)'; g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.3, r * 0.4, r * 0.25, 0, 0, 7); g.fill(); }
-  }
-  // cracks
-  g.strokeStyle = gray ? '#2a2a2a' : 'rgba(25,14,8,.75)'; g.lineWidth = 1.6;
-  for (let k = 0; k < 22; k++) { let x = rnd() * W, y = rnd() * H, a = rnd() * 6.28; g.beginPath(); g.moveTo(x, y); for (let s = 0; s < 14; s++) { a += (rnd() - 0.5) * 1.1; x += Math.cos(a) * 7; y += Math.sin(a) * 7; g.lineTo(x, y); } g.stroke(); }
-  // claw scratches
-  for (let k = 0; k < 7; k++) {
-    const x = rnd() * W, y = rnd() * H, a = rnd() * 6.28;
-    for (let j = 0; j < 3; j++) { g.strokeStyle = gray ? '#303030' : 'rgba(30,16,10,.8)'; g.lineWidth = 2.2; g.beginPath(); const ox = Math.cos(a + 1.57) * j * 7, oy = Math.sin(a + 1.57) * j * 7; g.moveTo(x + ox, y + oy); g.quadraticCurveTo(x + ox + Math.cos(a) * 22, y + oy + Math.sin(a) * 22 + 4, x + ox + Math.cos(a) * 44, y + oy + Math.sin(a) * 44); g.stroke(); }
-  }
-  // old dried blood
-  if (!gray) for (let k = 0; k < 9; k++) {
-    const x = rnd() * W, y = rnd() * H, r = 10 + rnd() * 34, gr = g.createRadialGradient(x, y, 0, x, y, r);
-    gr.addColorStop(0, 'rgba(70,4,8,.55)'); gr.addColorStop(0.7, 'rgba(60,6,8,.3)'); gr.addColorStop(1, 'rgba(60,6,8,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-  }
-}, 7, 7);
-const TEX_STONE = canvasTex(512, 256, (g, W, H, gray, rnd) => {
-  g.fillStyle = gray ? '#1a1a1a' : '#2c2522'; g.fillRect(0, 0, W, H);
-  const rows = 6, rh = H / rows;
-  for (let r = 0; r < rows; r++) {
-    let x = r % 2 ? -rnd() * 40 : 0;
-    while (x < W) {
-      const w = 50 + rnd() * 60, y = r * rh, pad = 3;
-      const l = 30 + rnd() * 16, hue = 15 + rnd() * 20;
-      g.fillStyle = gray ? `hsl(0,0%,${55 + rnd() * 30}%)` : `hsl(${hue},${6 + rnd() * 8}%,${l}%)`;
-      const bx = x + pad, by = y + pad, bw = Math.min(w, W - x) - pad * 2, bh = rh - pad * 2, rr = 7;
-      g.beginPath(); g.moveTo(bx + rr, by); g.arcTo(bx + bw, by, bx + bw, by + bh, rr); g.arcTo(bx + bw, by + bh, bx, by + bh, rr); g.arcTo(bx, by + bh, bx, by, rr); g.arcTo(bx, by, bx + bw, by, rr); g.fill();
-      if (!gray) { const gr = g.createLinearGradient(0, by, 0, by + bh); gr.addColorStop(0, 'rgba(255,240,225,.16)'); gr.addColorStop(0.4, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.25)'); g.fillStyle = gr; g.fill(); }
-      x += w;
-    }
-  }
-  noiseLayers(g, W, H, rnd, gray ? 0.25 : 0.4, [12, 40, 120], gray);
-  g.strokeStyle = gray ? '#202020' : 'rgba(15,10,8,.7)'; g.lineWidth = 1.3;
-  for (let k = 0; k < 18; k++) { let x = rnd() * W, y = rnd() * H, a = rnd() * 6.28; g.beginPath(); g.moveTo(x, y); for (let s = 0; s < 6; s++) { a += (rnd() - 0.5); x += Math.cos(a) * 6; y += Math.sin(a) * 6; g.lineTo(x, y); } g.stroke(); }
-  if (!gray) {  // moss creeping down from the top, blood streaks running down
-    for (let k = 0; k < 60; k++) { const x = rnd() * W, y = rnd() * rh * 1.3, r = 6 + rnd() * 16; g.fillStyle = `rgba(${70 + rnd() * 30},${110 + rnd() * 40},${40 + rnd() * 20},${0.35 + rnd() * 0.3})`; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
-    for (let k = 0; k < 5; k++) { const x = rnd() * W, y = H * (0.45 + rnd() * 0.3), len = 30 + rnd() * 70; const gr = g.createLinearGradient(0, y, 0, y + len); gr.addColorStop(0, 'rgba(90,6,10,.6)'); gr.addColorStop(1, 'rgba(90,6,10,0)'); g.fillStyle = gr; g.fillRect(x, y, 3 + rnd() * 4, len); }
-  }
-}, 14, 1);
-const TEX_GRASS = canvasTex(256, 256, (g, W, H, gray, rnd) => {
-  g.fillStyle = gray ? '#808080' : '#6fbf4f'; g.fillRect(0, 0, W, H);
-  noiseLayers(g, W, H, rnd, 0.35, [8, 24, 64], gray);
-  for (let i = 0; i < 1400; i++) { const x = rnd() * W, y = rnd() * H, h = 4 + rnd() * 7; g.strokeStyle = gray ? `hsl(0,0%,${50 + rnd() * 50}%)` : `hsl(${95 + rnd() * 30},${45 + rnd() * 20}%,${30 + rnd() * 25}%)`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 3, y - h); g.stroke(); }
-}, 40, 6);
+// ---- the pit, in the same clean candy style as the tower: smooth shapes, soft flat colors, glossy accents ----
+const softCol = (c1, c2, k) => new THREE.Color(c1).lerp(new THREE.Color(c2), Math.max(0, Math.min(1, k)));
 
-// pit floor: churned, textured dirt with a worn ring where the dogs pace and mounds by the wall
-const pitGeo = new THREE.PlaneGeometry(PIT_R * 2 + 6, PIT_R * 2 + 6, 200, 200); pitGeo.rotateX(-Math.PI / 2);
+// pit floor: smooth, gently rolling clay-colored dirt with big soft light and dark patches
+const pitGeo = new THREE.PlaneGeometry(PIT_R * 2 + 6, PIT_R * 2 + 6, 140, 140); pitGeo.rotateX(-Math.PI / 2);
 {
-  const p = pitGeo.attributes.position;
+  const p = pitGeo.attributes.position, col = [];
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i), r = Math.hypot(x, z);
-    let y = noise2(x, z) * 0.32 + Math.sin(x * 2.1 + z * 1.7) * 0.03 + (hash(Math.round(x * 3), Math.round(z * 3)) - 0.5) * 0.04;
-    y -= Math.exp(-Math.pow((r - 15) / 3.2, 2)) * 0.18;                                       // trodden ring
-    y += Math.exp(-Math.pow((r - (PIT_R - 3)) / 2.2, 2)) * (0.5 + 0.4 * Math.sin(Math.atan2(z, x) * 7)); // mounds by the wall
+    let y = groundY(x, z) - SLIME_Y;
     if (r > PIT_R - 1.5) y += (r - PIT_R + 1.5) * 0.8;
     p.setY(i, y);
+    const patch = Math.sin(x * 0.21 + Math.sin(z * 0.17) * 1.5) * Math.sin(z * 0.23 + Math.cos(x * 0.13) * 1.5);
+    const ring = Math.exp(-Math.pow((r - 15) / 3.2, 2));
+    const c = softCol(0xb4734a, patch > 0 ? 0xcc8c5c : 0x95593a, Math.abs(patch) * 0.8).lerp(new THREE.Color(0x8a5236), ring * 0.45);
+    col.push(c.r, c.g, c.b);
   }
-  pitGeo.computeVertexNormals();
+  pitGeo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); pitGeo.computeVertexNormals();
 }
-const pitFloor = new THREE.Mesh(pitGeo, new THREE.MeshStandardMaterial({ map: TEX_DIRT.map, bumpMap: TEX_DIRT.bump, bumpScale: 0.06, roughness: 0.95, envMapIntensity: 0.3 }));
+const pitFloor = new THREE.Mesh(pitGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, envMapIntensity: 0.5 }));
 pitFloor.position.y = SLIME_Y; pitFloor.receiveShadow = true; scene.add(pitFloor);
 
-// pit wall: blocky stones that bulge out a little each
+// pit wall: chunky rounded stone blocks with clean dark seams, like a toy castle
 {
-  const H = PIT_WALL + 1.2, g = new THREE.CylinderGeometry(PIT_R, PIT_R, H, 360, 48, true), p = g.attributes.position;
+  const H = PIT_WALL + 1.2, ROWS = 5, g = new THREE.CylinderGeometry(PIT_R, PIT_R, H, 288, 40, true), p = g.attributes.position, col = [];
+  const STONES = [0xa597b4, 0xb6a9c4, 0x9686a8, 0xab9dba].map(c => new THREE.Color(c)), SEAM = new THREE.Color(0x5d4f72);
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x);
-    const row = Math.floor((y + H / 2) / (H / 6)), u = (a / (Math.PI * 2) + 0.5) * 14 * 512 / 55 + (row % 2) * 0.4;
-    const fu = u - Math.floor(u), fv = ((y + H / 2) / (H / 6)) % 1;
-    const bulge = Math.sin(fu * Math.PI) * Math.sin(fv * Math.PI);
-    const k = (PIT_R - bulge * 0.28 - (hash(Math.floor(u), row) - 0.5) * 0.2) / PIT_R; p.setX(i, x * k); p.setZ(i, z * k);
+    const vv = (y + H / 2) / (H / ROWS), row = Math.min(ROWS - 1, Math.floor(vv)), uu = (a / (Math.PI * 2) + 0.5) * 34 + (row % 2) * 0.5;
+    const fu = uu - Math.floor(uu), fv = vv - Math.floor(vv), blk = Math.floor(uu) * 7 + row * 13;
+    const edge = Math.min(fu, 1 - fu, fv * 0.6, (1 - fv) * 0.6);
+    const bulge = Math.pow(Math.sin(fu * Math.PI) * Math.sin(Math.min(1, fv) * Math.PI), 0.5);
+    const k = (PIT_R - bulge * 0.35) / PIT_R; p.setX(i, x * k); p.setZ(i, z * k);
+    const c = edge < 0.05 ? SEAM.clone() : STONES[Math.abs(blk) % 4].clone().multiplyScalar(0.92 + fv * 0.12);
+    col.push(c.r, c.g, c.b);
   }
-  g.computeVertexNormals();
-  const wall = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: TEX_STONE.map, bumpMap: TEX_STONE.bump, bumpScale: 0.08, roughness: 0.88, side: THREE.DoubleSide, envMapIntensity: 0.35 }));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
+  const wall = new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.45, clearcoat: 0.25, side: THREE.DoubleSide, envMapIntensity: 0.6 }));
   wall.position.y = SLIME_Y + H / 2 - 0.6; wall.receiveShadow = true; scene.add(wall);
-  const lip = new THREE.Mesh(new THREE.TorusGeometry(PIT_R + 0.3, 0.75, 20, 240), new THREE.MeshStandardMaterial({ map: TEX_STONE.map, bumpMap: TEX_STONE.bump, bumpScale: 0.05, color: 0xbab0a8, roughness: 0.85 }));
-  lip.rotation.x = Math.PI / 2; lip.position.y = GRASS_Y; lip.receiveShadow = true; scene.add(lip);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(PIT_R + 0.3, 0.8, 24, 200), new THREE.MeshPhysicalMaterial({ color: 0xff74b4, roughness: 0.25, clearcoat: 0.9 }));
+  lip.rotation.x = Math.PI / 2; lip.position.y = GRASS_Y; lip.receiveShadow = true; lip.castShadow = true; scene.add(lip);
 }
-// grass ring outside the pit
+// grass ring outside the pit: clean stadium lawn with mowed stripes
 {
-  const g = new THREE.RingGeometry(PIT_R + 0.6, 170, 160, 8);
-  const grass = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: TEX_GRASS.map, bumpMap: TEX_GRASS.bump, bumpScale: 0.03, roughness: 0.9 }));
+  const g = new THREE.RingGeometry(PIT_R + 0.6, 170, 192, 30), p = g.attributes.position, col = [];
+  for (let i = 0; i < p.count; i++) { const a = Math.atan2(p.getY(i), p.getX(i)), c = new THREE.Color(Math.floor((a + Math.PI) / (Math.PI * 2) * 36) % 2 ? 0x86d462 : 0x76c655); col.push(c.r, c.g, c.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const grass = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 }));
   grass.rotation.x = -Math.PI / 2; grass.position.y = GRASS_Y + 0.02; grass.receiveShadow = true; scene.add(grass);
 }
 // lumpy rocks, bones, skulls, chains and two giant spiked food bowls
 {
-  const rockGeo = new THREE.IcosahedronGeometry(0.6, 3), rp = rockGeo.attributes.position;
-  for (let i = 0; i < rp.count; i++) { const v = new THREE.Vector3(rp.getX(i), rp.getY(i), rp.getZ(i)); const k = 1 + Math.sin(v.x * 7) * 0.08 + Math.sin(v.y * 9 + v.z * 5) * 0.07 + Math.sin(v.z * 11) * 0.05; v.multiplyScalar(k); rp.setXYZ(i, v.x, v.y, v.z); }
-  rockGeo.computeVertexNormals();
-  const rocks = new THREE.InstancedMesh(rockGeo, new THREE.MeshStandardMaterial({ map: TEX_STONE.map, bumpMap: TEX_STONE.bump, bumpScale: 0.05, color: 0xc9bfb6, roughness: 0.85 }), 52);
-  for (let i = 0; i < 52; i++) {
+  const rockGeo = new THREE.SphereGeometry(0.6, 28, 20);
+  const rocks = new THREE.InstancedMesh(rockGeo, new THREE.MeshPhysicalMaterial({ color: 0xa99cba, roughness: 0.4, clearcoat: 0.4 }), 40);
+  for (let i = 0; i < 40; i++) {
     const a = hash(i, 1) * Math.PI * 2, r = PIT_R - 1.5 - Math.pow(hash(i, 2), 0.6) * 20, x = Math.cos(a) * r, z = Math.sin(a) * r, s = 0.4 + hash(i, 3) * 1.4;
     dummy.position.set(x, groundY(x, z) + 0.12 * s, z); dummy.rotation.set(hash(i, 4) * 3, hash(i, 5) * 3, 0); dummy.scale.set(s, s * 0.7, s * (0.8 + hash(i, 6) * 0.5));
     dummy.updateMatrix(); rocks.setMatrixAt(i, dummy.matrix);
   }
+  const ROCK_COLS = [0xa99cba, 0xb9adc8, 0x9a8cad].map(c => new THREE.Color(c));
+  for (let i = 0; i < 40; i++) rocks.setColorAt(i, ROCK_COLS[i % 3]);
   rocks.castShadow = rocks.receiveShadow = true; scene.add(rocks);
   const boneMat = new THREE.MeshPhysicalMaterial({ color: 0xeee4cc, roughness: 0.5, clearcoat: 0.3 });
   const shafts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.09, 1.2, 16, 4), boneMat, 40);
@@ -766,18 +705,6 @@ pitFloor.position.y = SLIME_Y; pitFloor.receiveShadow = true; scene.add(pitFloor
     }
   }
   skulls.castShadow = true; scene.add(skulls); scene.add(sockets);
-  // chains hanging from the wall
-  const linkGeo = new THREE.TorusGeometry(0.2, 0.055, 10, 20), chainMat = new THREE.MeshStandardMaterial({ color: 0x5a5560, metalness: 0.85, roughness: 0.35 });
-  const links = new THREE.InstancedMesh(linkGeo, chainMat, 4 * 22); let li = 0;
-  [0.6, 2.2, 3.8, 5.1].forEach(a => {
-    const x0 = Math.cos(a) * (PIT_R - 0.4), z0 = Math.sin(a) * (PIT_R - 0.4), x1 = Math.cos(a) * (PIT_R - 4.5), z1 = Math.sin(a) * (PIT_R - 4.5);
-    for (let k = 0; k < 22; k++) {
-      const u = k / 21, sag = Math.sin(u * Math.PI) * 1.4;
-      dummy.position.set(x0 + (x1 - x0) * u, SLIME_Y + 5.6 - u * 5.4 - sag + (u > 0.95 ? 0 : 0), z0 + (z1 - z0) * u);
-      dummy.rotation.set(0, -a, k % 2 ? Math.PI / 2 : 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); links.setMatrixAt(li++, dummy.matrix);
-    }
-  });
-  links.castShadow = true; scene.add(links);
   // two giant spiked food bowls
   const bowlPts = [[0.001, 0], [1.5, 0], [1.75, 0.08], [1.9, 0.75], [2.05, 0.82], [2.0, 0.9], [1.7, 0.85], [1.55, 0.22], [0.001, 0.22]].map(v => new THREE.Vector2(v[0], v[1]));
   const bowlGeo = new THREE.LatheGeometry(bowlPts, 72), bowlMat = new THREE.MeshPhysicalMaterial({ color: 0xc23a3a, metalness: 0.2, roughness: 0.25, clearcoat: 0.8 });
