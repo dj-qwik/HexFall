@@ -4,6 +4,7 @@ A party game for up to four players. This folder runs it as a website on Render,
 
 - `server.js` serves the game at `/` and relays online rooms at `/ws`. It has no dependencies.
 - `public/index.html` is the whole game.
+- `public/music/` holds the soundtrack. HexFall plays in the menus; the others rotate through matches.
 - `render.yaml` tells Render how to run it on the free plan.
 
 ## Put it online (one time, about 10 minutes)

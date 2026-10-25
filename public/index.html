@@ -142,12 +142,12 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
 .banner{position:absolute;top:max(14px,env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));
   background:var(--pink);color:#fff;border:3px solid var(--ink);padding:6px 18px 6px 14px;transform:skewX(-10deg);box-shadow:0 4px 0 var(--ink);}
 .banner span{display:inline-block;transform:skewX(10deg);font-family:var(--display);font-size:22px;letter-spacing:.02em;}
-.outbox{position:absolute;top:max(14px,env(safe-area-inset-top,0px));right:max(70px,calc(env(safe-area-inset-right,0px) + 70px));
+.outbox{position:absolute;top:max(14px,env(safe-area-inset-top,0px));right:max(128px,calc(env(safe-area-inset-right,0px) + 128px));
   background:var(--ink);color:#fff;border:3px solid #fff;padding:4px 16px;transform:skewX(-10deg);text-align:center;min-width:72px;}
 .outbox > *{display:block;transform:skewX(10deg);}
 .outbox small{font-size:12px;letter-spacing:.12em;opacity:.8;}
 .outbox b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;}
-#timer{position:absolute;top:max(70px,calc(env(safe-area-inset-top,0px) + 70px));right:max(70px,calc(env(safe-area-inset-right,0px) + 70px));
+#timer{position:absolute;top:max(70px,calc(env(safe-area-inset-top,0px) + 70px));right:max(128px,calc(env(safe-area-inset-right,0px) + 128px));
   font-family:var(--display);font-size:22px;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;font-variant-numeric:tabular-nums;}
 #chips{position:absolute;bottom:max(14px,env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:calc(100% - 32px);}
 .chip{display:flex;align-items:center;gap:8px;background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:4px 14px 4px 6px;box-shadow:0 3px 0 var(--ink);}
@@ -201,6 +201,12 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
 
 #fsBtn{pointer-events:auto;position:absolute;top:max(14px,env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));
   width:46px;height:46px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);box-shadow:0 4px 0 var(--ink);display:grid;place-items:center;padding:0;}
+#musicBtn{pointer-events:auto;position:absolute;top:max(14px,env(safe-area-inset-top,0px));right:max(72px,calc(env(safe-area-inset-right,0px) + 72px));
+  width:46px;height:46px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);box-shadow:0 4px 0 var(--ink);display:grid;place-items:center;padding:0;}
+#musicBtn svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;}
+#musicBtn .slash{stroke:var(--pink);stroke-width:3;}
+#musicBtn[aria-pressed="true"] .slash{display:none;}
+#musicBtn[aria-pressed="false"]{background:#f1ecf8;}
 #fsBtn svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;}
 #toast{position:absolute;left:50%;bottom:max(80px,calc(env(safe-area-inset-bottom,0px) + 80px));transform:translateX(-50%);background:var(--ink);color:#fff;
   font-weight:600;padding:8px 16px;border-radius:999px;font-size:15px;opacity:0;transition:opacity .25s;max-width:calc(100% - 32px);text-align:center;}
@@ -295,7 +301,7 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
           <div class="ctl"><strong>Controller</strong><kbd class="k">A</kbd> join / jump <kbd class="k">X</kbd> dive <kbd class="k">RB</kbd> grab <kbd class="k">Right stick</kbd> look <kbd class="k">LT</kbd>/<kbd class="k">RT</kbd> zoom <kbd class="k">Start</kbd> pause</div>
           <div class="ctl"><strong>Keyboard 1</strong><kbd class="k">WASD</kbd> move <kbd class="k">Space</kbd> join / jump <kbd class="k">Shift</kbd> dive <kbd class="k">E</kbd> grab</div>
           <div class="ctl"><strong>Keyboard 2</strong><kbd class="k">Arrows</kbd> move <kbd class="k">/</kbd> join / jump <kbd class="k">.</kbd> dive <kbd class="k">,</kbd> grab</div>
-          <div class="ctl"><strong>Anywhere</strong><kbd class="k">F</kbd> fullscreen <kbd class="k">B</kbd> / <kbd class="k">Backspace</kbd> leave <kbd class="k">C</kbd> / <kbd class="k">Y</kbd> CPU fill <kbd class="k">V</kbd> / <kbd class="k">X</kbd> CPU skill</div>
+          <div class="ctl"><strong>Anywhere</strong><kbd class="k">F</kbd> fullscreen <kbd class="k">M</kbd> music <kbd class="k">B</kbd> / <kbd class="k">Backspace</kbd> leave <kbd class="k">C</kbd> / <kbd class="k">Y</kbd> CPU fill <kbd class="k">V</kbd> / <kbd class="k">X</kbd> CPU skill</div>
           <div class="ctl"><strong>Mouse</strong>Drag to look around, scroll to zoom</div>
           <div class="ctl"><strong>Online</strong>Any keyboard layout or controller moves your character.</div>
         </div>
@@ -330,6 +336,9 @@ kbd.k{display:inline-block;font-family:var(--body);font-weight:700;font-size:12p
     </div>
   </div>
 
+  <button id="musicBtn" type="button" aria-label="Music (M)" aria-pressed="true" title="Music on (M)">
+    <svg viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/><path class="slash" d="M3 3l18 18"/></svg>
+  </button>
   <button id="fsBtn" type="button" aria-label="Toggle fullscreen (F)" title="Fullscreen (F)">
     <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
   </button>
@@ -629,7 +638,61 @@ const CHARS = PLAYER_DEFS.map(makeChar);
 
 /* ================= audio ================= */
 let AC = null, master = null, popBudget = 0;
+/* ================= soundtrack ================= */
+// HexFall plays in the menus; the other five rotate through matches, a new one each round.
+// Songs crossfade, and the mute choice is remembered.
+const THEME = { name: 'HexFall', file: 'HexFall.mp3' };
+const TRACKS = [
+  { name: 'Determination', file: 'Determination.mp3' },
+  { name: 'Losing Fear', file: 'Losing_Fear.mp3' },
+  { name: 'Wanderer', file: 'Wanderer.mp3' },
+  { name: 'By the Lake', file: 'By_the_lake.mp3' },
+  { name: 'A Mindful State', file: 'A_Mindful_State.mp3' },
+];
+const MUSIC_VOL = 0.55;
+const music = { els: [new Audio(), new Audio()], cur: 0, track: null, unlocked: false, muted: false, queue: [], announce: false };
+try { music.muted = localStorage.getItem('hexfall.musicMuted') === '1'; } catch (e) {}
+music.els.forEach(el => { el.preload = 'auto'; el.volume = 0; el.addEventListener('ended', () => { if (el === music.els[music.cur] && music.track !== THEME) nextMatchTrack(); }); });
+function startTrack(t, loop) {
+  if (music.track === t) return;
+  music.track = t;
+  const next = music.els[1 - music.cur];
+  next.src = 'music/' + t.file; next.loop = loop; next.currentTime = 0; next.volume = 0;
+  music.cur = 1 - music.cur;
+  if (music.unlocked) next.play().catch(() => {});
+  if (music.announce && !music.muted && music.unlocked) toast('♪ ' + t.name);
+}
+function nextMatchTrack() {
+  if (!music.queue.length) {
+    music.queue = TRACKS.slice();
+    for (let i = music.queue.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [music.queue[i], music.queue[j]] = [music.queue[j], music.queue[i]]; }
+    if (music.queue[0] === music.track && music.queue.length > 1) music.queue.push(music.queue.shift());
+  }
+  music.track = null; // force a change even if the same song comes round again
+  music.announce = true; startTrack(music.queue.shift(), false);
+}
+function playTheme() { music.announce = false; startTrack(THEME, true); }
+function musicTick(dt) {
+  const k = 1 - Math.exp(-2.5 * dt);
+  music.els.forEach((el, i) => {
+    const want = i === music.cur && !music.muted ? MUSIC_VOL : 0;
+    el.volume = Math.max(0, Math.min(1, el.volume + (want - el.volume) * k));
+    if (i !== music.cur && el.volume < 0.01 && !el.paused) el.pause();
+  });
+}
+function unlockMusic() {
+  if (music.unlocked) return;
+  music.unlocked = true;
+  const el = music.els[music.cur]; if (el.src) el.play().catch(() => { music.unlocked = false; });
+}
+function setMuted(m) {
+  music.muted = m;
+  try { localStorage.setItem('hexfall.musicMuted', m ? '1' : '0'); } catch (e) {}
+  const b = $('#musicBtn'); b.setAttribute('aria-pressed', String(!m)); b.title = m ? 'Music off (M)' : 'Music on (M)';
+}
+
 function initAudio() {
+  unlockMusic();
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   try { AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination); } catch (e) { AC = null; }
 }
@@ -1373,6 +1436,7 @@ function toggleCpu() {
 }
 
 function toLobby() {
+  playTheme();
   state = 'lobby'; paused = false; players = [];
   show('#lobby', true); show('#hud', false); show('#pause', false); show('#result', false);
   bigText(''); $('#confetti').innerHTML = '';
@@ -1388,6 +1452,7 @@ function placeAtSpawn(p) {
   p.ch.root.visible = true; p.ch.root.scale.setScalar(1); p.ch.root.position.copy(p.pos); p.ch.tilt.rotation.z = 0;
 }
 function beginRoundUI() {
+  nextMatchTrack();
   CHARS.forEach((c, i) => { if (!players[i]) c.root.visible = false; });
   tagPool.forEach(row => row.forEach((t, i) => { const p = players[i]; t.hidden = true; if (p) t.querySelector('span').textContent = p.isMe ? 'YOU' : p.name; }));
   players.forEach(p => { p.view = null; });
@@ -1790,6 +1855,8 @@ function guestStartRound(g) {
 
 /* ----- DOM events ----- */
 $('#fsBtn').addEventListener('click', toggleFS);
+$('#musicBtn').addEventListener('click', () => setMuted(!music.muted));
+setMuted(music.muted);
 $('#startBtn').addEventListener('click', startRound);
 $('#cpuBtn').addEventListener('click', toggleCpu);
 $('#netCpuBtn').addEventListener('click', toggleCpu);
@@ -1852,6 +1919,7 @@ window.addEventListener('keydown', e => {
   K[e.code] = true;
   if (e.repeat) return;
   if (e.code === 'KeyF') { toggleFS(); return; }
+  if (e.code === 'KeyM') { setMuted(!music.muted); return; }
   if (state === 'lobby') {
     if (NET.mode === 'online') {
       if (e.code === 'Enter' && NET.room && NET.role === 'host') startRound();
@@ -1911,6 +1979,7 @@ let last = performance.now(), clock = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; clock += dt;
   popBudget = Math.max(0, popBudget - dt);
+  musicTick(dt);
   const padCount = pads.filter(Boolean).length;
   pollPads(); handlePads();
   if (state === 'lobby' && NET.mode === 'local' && pads.filter(Boolean).length !== padCount) renderLobby();

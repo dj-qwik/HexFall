@@ -22,8 +22,30 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  const song = url.match(/^\/music\/([A-Za-z0-9_-]+\.mp3)$/);
+  if (song) { sendSong(req, res, path.join(__dirname, 'public', 'music', song[1])); return; }
   res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('Not found');
 });
+
+// songs support byte ranges so browsers can stream and loop them
+function sendSong(req, res, file) {
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) { res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('Not found'); return; }
+    const headers = { 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400' };
+    const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (!m || (!m[1] && !m[2])) {
+      res.writeHead(200, { ...headers, 'Content-Length': st.size });
+      if (req.method === 'HEAD') { res.end(); return; }
+      fs.createReadStream(file).pipe(res); return;
+    }
+    let start = m[1] ? parseInt(m[1], 10) : Math.max(0, st.size - parseInt(m[2], 10));
+    let end = m[1] && m[2] ? Math.min(parseInt(m[2], 10), st.size - 1) : st.size - 1;
+    if (start >= st.size || start > end) { res.writeHead(416, { 'Content-Range': 'bytes */' + st.size }); res.end(); return; }
+    res.writeHead(206, { ...headers, 'Content-Range': `bytes ${start}-${end}/${st.size}`, 'Content-Length': end - start + 1 });
+    if (req.method === 'HEAD') { res.end(); return; }
+    fs.createReadStream(file, { start, end }).pipe(res);
+  });
+}
 
 /* ---------- minimal WebSocket (RFC 6455) ---------- */
 function encodeFrame(opcode, payload) {
