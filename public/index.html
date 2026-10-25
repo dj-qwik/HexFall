@@ -424,7 +424,7 @@ scene.add(sun); scene.add(sun.target);
 
 /* ================= arena ================= */
 const S = 1.6, N = 6, LAYERS = 6, GAP = 5, SQ3 = Math.sqrt(3);
-const FALL_DELAY = 1.1, DROP_T = 0.3, TIME_LIMIT = 180;
+const FALL_DELAY = 0.85, BOTTOM_DELAY = 1.95, DROP_T = 0.3, TIME_LIMIT = 180;
 const layerY = L => -L * GAP;
 const SLIME_Y = layerY(LAYERS - 1) - 5;
 const LAYER_COLORS = [0xa760f0, 0x4ea6ff, 0xffc63a, 0xff74b4, 0x4fd59b, 0xff8f45, 0x47d4e6, 0xc6e84a];
@@ -539,7 +539,7 @@ function updateTiles(dt) {
     lay.t[i] += dt; const t = lay.t[i];
     if (lay.state[i] === 1) {
       // flash white, faster and faster, then drop
-      const delay = L === LAYERS - 1 ? FALL_DELAY * 2 : FALL_DELAY; // the last floor holds twice as long
+      const delay = L === LAYERS - 1 ? BOTTOM_DELAY : FALL_DELAY; // the last floor holds longer
       const f = Math.min(1, t / delay);
       const on = Math.sin(t * (10 + 28 * f)) > 0;
       _c.copy(lay.base[i]).lerp(WHITE, on ? 0.72 : 0.1 + 0.2 * f);
