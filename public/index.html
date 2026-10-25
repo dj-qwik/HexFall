@@ -1672,36 +1672,55 @@ function eliminate(p) {
 }
 
 /* ----- bots ----- */
-// CPU skill: how well a CPU reads the floor (noise, lookahead), how patiently it hops,
-// how fast it reacts, and how much it wants to win (hunting, shoving and grabbing other players).
+// CPU skill: how well a CPU reads the floor (noise, how far it looks, rings of safe tiles it wants
+// around it, planning for the floor below), how patiently it hops, how fast it reacts, and how much
+// it wants to win (hunting, shoving and grabbing other players).
 const SKILLS = [
-  { name: 'Easy',     desc: 'Wanders, runs a lot and sometimes hops onto a doomed tile.',           noise: [2.4, 3.2], hop: [0.15, 0.35], think: [0.45, 0.4], look: 0,   aggr: 0,    slip: 0.18 },
-  { name: 'Normal',   desc: 'Hops between safe tiles and mostly stays out of your way.',            noise: [0.8, 2.0], hop: [0.5, 0.8],   think: [0.18, 0.3], look: 0.3, aggr: 0.04, slip: 0.04 },
-  { name: 'Hard',     desc: 'Saves floor, plans for the level below and will shove you.',           noise: [0.35, 0.8], hop: [0.8, 0.92], think: [0.12, 0.12], look: 0.8, aggr: 0.18, slip: 0 },
-  { name: 'Ruthless', desc: 'Near-perfect hopping, and it hunts players to dive them off the edge.', noise: [0.08, 0.25], hop: [0.93, 0.99], think: [0.07, 0.06], look: 1.2, aggr: 0.42, slip: 0 },
+  { name: 'Easy',     desc: 'Hops between safe tiles, but slow to react and easily cornered.',             noise: [1.0, 1.6], hop: [0.45, 0.6], think: [0.28, 0.2], reach: 5,  look: 0.3, aggr: 0.03, slip: 0.05, react: 0.3,  smart: false, plan: false, patience: 0, margin: 0.2 },
+  { name: 'Normal',   desc: 'Keeps moving, checks its landings and plans ahead a little.',                 noise: [0.7, 1.1], hop: [0.7, 0.85], think: [0.14, 0.1], reach: 7,  look: 0.5, aggr: 0.06, slip: 0,    react: 0.26, smart: true,  plan: false, patience: 0.35, margin: 0.12 },
+  { name: 'Hard',     desc: 'Saves floor, reads the whole level, drops on purpose to good spots below.',   noise: [0.12, 0.3], hop: [0.93, 0.98], think: [0.07, 0.05], reach: 11, look: 1.1, aggr: 0.16, slip: 0,    react: 0.16, smart: true,  plan: true,  patience: 0.85, margin: 0.08 },
+  { name: 'Ruthless', desc: 'Near-perfect hopping and planning, and it hunts players to shove them off.', noise: [0.02, 0.08], hop: [1, 1],       think: [0.04, 0.03], reach: 99, look: 1.5, aggr: 0.4,  slip: 0,    react: 0.1,  smart: true,  plan: true,  patience: 1, margin: 0.05 },
 ];
 let cpuSkill = 1;
 try { const v = parseInt(localStorage.getItem('hexfall.cpuSkill'), 10); if (v >= 0 && v < SKILLS.length) cpuSkill = v; } catch (e) {}
 const rng = ([lo, hi]) => lo + Math.random() * (hi - lo);
 function makeBrain() {
   const k = SKILLS[cpuSkill];
-  return { t: 0, tx: 0, tz: 0, has: false, wantHop: false, hunt: null,
-    noise: rng(k.noise), hop: rng(k.hop), think: k.think, look: k.look, aggr: k.aggr, slip: k.slip };
+  return { t: 0, tx: 0, tz: 0, ti: -1, has: false, wantHop: false, hunt: null, drop: false,
+    noise: rng(k.noise), hop: rng(k.hop), think: k.think, reach: k.reach, look: k.look, aggr: k.aggr, slip: k.slip, react: k.react, smart: k.smart, plan: k.plan, patience: k.patience, margin: k.margin, ring2: cpuSkill >= 2, wasG: true, stay: false };
 }
-
+const JUMP_AIR = 2 * JUMP / -GRAV;   // seconds in the air on a hop
+const tileAt = (L, x, z) => { const [q, r] = axialRound(x, z); const i = layers[L].map.get(key(q, r)); return i === undefined ? -1 : i; };
+const delayOf = L => (L === LAYERS - 1 ? BOTTOM_DELAY : FALL_DELAY);
+// how much safe floor surrounds tile i: 1 for each intact neighbour, half for the ring beyond
+function room(lay, i, ring2) {
+  let n = 0;
+  for (const [a, c] of DIRS) {
+    const j = lay.map.get(key(lay.q[i] + a, lay.r[i] + c));
+    if (j === undefined || lay.state[j] !== 0) continue;
+    n++;
+    if (ring2) for (const [a2, c2] of DIRS) { const k = lay.map.get(key(lay.q[j] + a2, lay.r[j] + c2)); if (k !== undefined && k !== i && lay.state[k] === 0) n += 0.08; }
+  }
+  return n;
+}
 function botInput(p) {
   const b = p.bot, inp = { mx: 0, mz: 0, jump: false, dive: false, grab: false };
   const L = p.layer, lay = layers[L];
-  if (b.t <= 0) {
+  const here = tileAt(L, p.pos.x, p.pos.z);
+  // react when the tile underfoot is about to go
+  const urgent = here >= 0 && lay.state[here] === 1 && lay.t[here] > delayOf(L) - b.react - 0.25;
+  const reached = b.has && Math.hypot(b.tx - p.pos.x, b.tz - p.pos.z) < 0.45 * S;
+  const targetBad = b.has && !b.drop && b.ti >= 0 && lay.state[b.ti] !== 0;
+  if (b.t <= 0 || reached || (b.smart && targetBad)) {
     b.t = b.think[0] + Math.random() * b.think[1];
     b.wantHop = Math.random() < b.hop;
-    // wanting to win: sometimes go after the nearest rival on this floor instead of just surviving
+    // wanting to win: go after a nearby rival, but only from safe footing
     b.hunt = null;
-    if (b.aggr > 0 && p.grounded && Math.random() < b.aggr) {
-      let bd = 3.2 * S;
+    if (b.aggr > 0 && p.grounded && Math.random() < b.aggr && (here < 0 || room(lay, here, false) >= 4)) {
+      let bd = (cpuSkill >= 3 ? 4.2 : 3.2) * S;
       for (const q of players) {
-        if (q === p || !q.alive || q.layer !== L || Math.abs(q.pos.y - p.pos.y) > 1) continue;
-        const d = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z) * (q.kind === 'cpu' ? 1.25 : 1);
+        if (q === p || !q.alive || !isHuman(q) || q.layer !== L || Math.abs(q.pos.y - p.pos.y) > 1) continue;  // CPUs gang up on people, not each other
+        const d = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z);
         if (d < bd) { bd = d; b.hunt = q; }
       }
     }
@@ -1709,24 +1728,48 @@ function botInput(p) {
       let best = -1, bs = -1e9;
       const below = L + 1 < LAYERS ? layers[L + 1] : null;
       for (let i = 0; i < lay.n; i++) {
-        if (lay.state[i] !== 0) continue;
+        if (lay.state[i] !== 0 || i === here) continue;
         const dx = lay.x[i] - p.pos.x, dz = lay.z[i] - p.pos.z, d = Math.hypot(dx, dz);
-        if (d > 5.2 * S || d < 0.85 * S) continue;
-        let n = 0;
-        for (const [a, c] of DIRS) { const j = lay.map.get(key(lay.q[i] + a, lay.r[i] + c)); if (j !== undefined && lay.state[j] === 0) n++; }
+        if (d > (b.smart ? Math.min(b.reach, 2.6) : b.reach) * S || d < 0.85 * S) continue;
         let crowd = 0;
-        for (const q of players) if (q !== p && q.alive && q.layer === L && Math.hypot(q.pos.x - lay.x[i], q.pos.z - lay.z[i]) < 2.2 * S) crowd++;
-        let sc = n - d / S * 0.28 - crowd * 1.4 + Math.random() * b.noise;
-        if (below && b.look) { const j = below.map.get(key(lay.q[i], lay.r[i])); sc += b.look * (j !== undefined && below.state[j] === 0 ? 1 : -1); }
+        for (const q of players) if (q !== p && q.alive && q.layer === L && Math.hypot(q.pos.x - lay.x[i], q.pos.z - lay.z[i]) < 2.4 * S) crowd++;
+        // prefer close tiles with lots of safe floor around them, away from others
+        let sc = room(lay, i, b.ring2) * 1.2 - (d / S) * (b.smart ? 0.45 : 0.3) - crowd * 1.6 + Math.random() * b.noise;
+        // a hop lands about one tile and a bit away: tiles at that range are ideal for saving floor
+        if (below && b.look) { const j = below.map.get(key(lay.q[i], lay.r[i])); sc += b.look * (j !== undefined && below.state[j] === 0 ? room(below, j, false) / 6 : -1); }
         if (sc > bs) { bs = sc; best = i; }
       }
+      if (b.smart && best < 0) {
+        for (let i = 0; i < lay.n; i++) {
+          if (lay.state[i] !== 0 || i === here) continue;
+          const d = Math.hypot(lay.x[i] - p.pos.x, lay.z[i] - p.pos.z); if (d > b.reach * S) continue;
+          const sc = room(lay, i, b.ring2) - (d / S) * 0.6 + Math.random() * b.noise;
+          if (sc > bs) { bs = sc; best = i; }
+        }
+      }
+      b.drop = false;
+      // when this floor is nearly spent, step off on purpose above the best patch of the floor below
+      if (b.plan && below && best < 0) {
+        let bj = -1, bjs = -1e9;
+        for (let j = 0; j < below.n; j++) {
+          if (below.state[j] !== 0) continue;
+          const d = Math.hypot(below.x[j] - p.pos.x, below.z[j] - p.pos.z);
+          if (d > 8 * S) continue;
+          const above = lay.map.get(key(below.q[j], below.r[j])), open = above === undefined || lay.state[above] >= 2;
+          const sc = room(below, j, true) * 1.5 - (d / S) * 0.5 + (open ? 2 : 0);
+          if (sc > bjs) { bjs = sc; bj = j; }
+        }
+        if (bj >= 0 && bjs > bs + 1) { best = -1; b.tx = below.x[bj]; b.tz = below.z[bj]; b.ti = -1; b.has = true; b.drop = true; }
+      }
       // easy CPUs sometimes just pick any nearby tile, even one that's already going
-      if (b.slip && Math.random() < b.slip) {
+      if (!b.drop && b.slip && Math.random() < b.slip) {
         const near = []; for (let i = 0; i < lay.n; i++) if (lay.state[i] < 2 && Math.hypot(lay.x[i] - p.pos.x, lay.z[i] - p.pos.z) < 3 * S) near.push(i);
         if (near.length) best = near[(Math.random() * near.length) | 0];
       }
-      if (best >= 0) { b.tx = lay.x[best]; b.tz = lay.z[best]; b.has = true; }
-      else { b.has = false; }
+      if (!b.drop) {
+        if (best >= 0) { b.tx = lay.x[best]; b.tz = lay.z[best]; b.ti = best; b.has = true; }
+        else b.has = false;
+      }
     }
   }
   const h = b.hunt;
@@ -1734,15 +1777,53 @@ function botInput(p) {
     const dx = h.pos.x - p.pos.x, dz = h.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1;
     inp.mx = dx / d; inp.mz = dz / d;
     const facing = (dx * Math.sin(p.yaw) + dz * Math.cos(p.yaw)) / d;
-    if (d < 1.9 && facing > 0.8 && p.grounded && Math.random() < 0.5) inp.dive = !p.prevDive;
+    // only dive if there is floor to land on past the target
+    const ahead = tileAt(L, p.pos.x + dx / d * 2.4 * S, p.pos.z + dz / d * 2.4 * S);
+    if (d < 1.9 && facing > 0.8 && p.grounded && ahead >= 0 && lay.state[ahead] === 0 && Math.random() < 0.5) inp.dive = !p.prevDive;
     else if (d < 1.4) inp.grab = true;
     else if (p.grounded && b.wantHop) inp.jump = !p.prevJump;
+    if (urgent && p.grounded) inp.jump = !p.prevJump;
     return inp;
   }
+  if (b.has && b.smart) {
+    // decide once per landing whether to hop in place (stretching this tile) or move on
+    const landed = p.grounded && !b.wasG;
+    if (landed || (p.grounded && b.stay === null)) {
+      const left = here >= 0 && lay.state[here] < 2 ? delayOf(L) - (lay.state[here] === 1 ? lay.t[here] : 0) : 0;
+      b.stay = !b.drop && left > JUMP_AIR + b.margin && Math.random() < b.patience;
+      if (!b.stay) b.t = 0;  // pick a fresh next tile right now
+    }
+    let tx = b.tx, tz = b.tz;
+    if (b.stay && here >= 0) { tx = lay.x[here]; tz = lay.z[here]; }
+    const dx = tx - p.pos.x, dz = tz - p.pos.z, d = Math.hypot(dx, dz);
+    // steer so the hop comes down right on the target
+    const airLeft = p.grounded ? JUMP_AIR : Math.max(0.08, (p.vel.y + Math.sqrt(Math.max(0, p.vel.y * p.vel.y + 60 * (p.pos.y - layerY(L))))) / 30);
+    const want = Math.min(RUN, d / airLeft) / RUN;
+    if (d > 0.05) { inp.mx = dx / d * want; inp.mz = dz / d * want; }
+    if (p.grounded || p.coyote > 0) {
+      const land = b.stay ? here : tileAt(L, tx, tz);
+      const ok = land >= 0 && lay.state[land] < 2 && (b.stay || lay.state[land] === 0);
+      if (b.drop) { if (d < 0.6 * S) { inp.mx = dx / (d || 1); inp.mz = dz / (d || 1); } }
+      else if (ok && (b.stay || Math.random() < b.hop) || urgent) inp.jump = !p.prevJump;
+    }
+    b.wasG = p.grounded;
+    return inp;
+  }
+  b.wasG = p.grounded;
   if (b.has) {
     const dx = b.tx - p.pos.x, dz = b.tz - p.pos.z, d = Math.hypot(dx, dz);
-    if (d > 0.3 * S) { inp.mx = dx / d; inp.mz = dz / d; }
-    if (p.grounded && b.wantHop && d > 0.5 * S) inp.jump = !p.prevJump;
+    // ease off near the target so hops land on it instead of past it
+    const mag = b.smart ? Math.max(0.3, Math.min(1, d / (1.4 * S))) : 1;
+    if (d > 0.2 * S) { inp.mx = dx / d * mag; inp.mz = dz / d * mag; }
+    if (p.grounded || p.coyote > 0) {
+      if (b.smart && !b.drop) {
+        // hop only when the landing spot is still solid; run otherwise
+        const hs = Math.hypot(p.vel.x, p.vel.z), ld = Math.min(d, hs * JUMP_AIR + 0.5);
+        const land = tileAt(L, p.pos.x + dx / (d || 1) * ld, p.pos.z + dz / (d || 1) * ld);
+        const ok = land >= 0 && lay.state[land] === 0;
+        if ((b.wantHop && d > 0.55 * S && ok) || urgent) inp.jump = !p.prevJump;
+      } else if (!b.drop && ((b.wantHop && d > 0.5 * S) || urgent)) inp.jump = !p.prevJump;
+    }
   } else if (p.grounded) {
     inp.mx = Math.sin(p.yaw); inp.mz = Math.cos(p.yaw); inp.jump = !p.prevJump && Math.random() < 0.5;
   }
