@@ -350,7 +350,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
           <div class="actions"><button class="btn small" id="leaveBtn" type="button">Leave room</button></div>
         </div>
       </div>
-      <p class="tip"><b>PRO TIP</b>Hop, don't run. A shot stuns people and drops them a floor. Shoot them all the way to the dogs.</p>
+      <p class="tip"><b>PRO TIP</b>Hop, don't run. A shot stuns people and drops them a floor. Keep shooting and they'll run out of floors.</p>
       <details class="howto">
         <summary>Controls</summary>
         <div class="controls">
@@ -1019,6 +1019,15 @@ const HURT_WORDS = [
   'Okay okay okay OKAY!', "I'm fine! I'm FINE!", "That's my only body!", 'Hold up, hold up!',
   "My insurance don't cover this!", 'Son of a—!', 'Respectfully... OW.', 'That was my lucky spot!',
   'Bullets?! In THIS economy?!', 'Ayo, that hurt!', 'Tis but a flesh wound!', 'Not cool, man. NOT COOL.',
+  'My spine just filed for divorce!', "That's comin' out of your allowance!", 'Down I go! AGAIN!', 'Floor? What floor?!',
+  'I was standing on that!', 'Gravity, you snitch!', 'Nice shot. I hate you.', 'Who keeps DOING that?!',
+  "Bro, I'm seein' stars!", 'Elevator going DOWN!', 'Not again, man!', "I'm dizzy as hell!",
+  "That's a cheap shot!", 'I felt that in my wallet!', 'Mayday! MAYDAY!', 'Bye-bye, tile!',
+  'Bro, I just landed here!', "Tag, I'm falling!", "Y'all are MEAN!", 'Tell me that was friendly fire!',
+  'See you downstairs!', 'Basement, here I come!', 'Oof. Rude AND accurate.', 'Somebody hold my grillz!',
+  "This ain't fair, homie!", "Ain't nobody got time for this!", 'TIMBERRRR!', 'My ears are ringing!',
+  "Who taught y'all to shoot?!", 'Lower floor, more problems!', "I'll be back up! ...Probably not.", 'Okay, that one was kinda impressive.',
+  "Stop! I'm already falling!", 'Damn! Right in the ego!', 'Wait, which way is up?!', "I'm gonna remember this!",
 ];
 // each list is drawn from a shuffled deck, so nothing repeats until every line has come up
 const decks = new Map();
