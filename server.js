@@ -141,4 +141,4 @@ setInterval(() => {
   }
 }, 25000);
 
-server.listen(PORT, () => console.log('Hexfall is running on port ' + PORT));
+server.listen(PORT, () => console.log('Game server running on port ' + PORT));

@@ -1,4 +1,4 @@
-# Hexfall
+# Hood Niggaz
 
 A party game for up to four players. This folder runs it as a website on Render, with online rooms anyone can join.
 

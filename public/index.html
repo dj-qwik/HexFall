@@ -6,7 +6,7 @@
 <style>[hidden]{display:none!important}body{margin:0}</style>
 </head>
 <body>
-<title>Hexfall</title>
+<title>Hood Niggaz</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Lilita+One&display=swap">
@@ -40,10 +40,10 @@ button:focus-visible{outline:3px solid var(--violet);outline-offset:3px;}
   left:max(16px,env(safe-area-inset-left,0px));width:min(470px,calc(100% - 32px));
   box-sizing:border-box;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:12px;padding:4px 10px 14px 4px;scrollbar-width:thin;}
 .brand{position:relative;padding:4px 0 2px;}
-.logo{display:flex;gap:2px;margin:0;font-family:var(--display);font-weight:400;font-size:clamp(58px,9vw,94px);line-height:.95;}
+.logo{display:flex;flex-wrap:wrap;gap:0 2px;margin:0;font-family:var(--display);font-weight:400;font-size:clamp(58px,9vw,94px);line-height:.95;}
 .logo span{display:inline-block;color:var(--c);-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;
   text-shadow:0 7px 0 var(--ink);transform:rotate(var(--r));animation:bob 2.4s ease-in-out infinite;animation-delay:calc(var(--i) * -.18s);}
-.logo .gap{width:.18em;animation:none;}
+.logo .gap{flex-basis:100%;height:0;animation:none;}
 @keyframes bob{0%,100%{transform:translateY(0) rotate(var(--r))}50%{transform:translateY(-7px) rotate(calc(var(--r) * -1))}}
 .tagline{position:absolute;right:2px;bottom:-6px;margin:0;background:var(--violet);color:#fff;font-weight:700;font-size:15px;
   border:3px solid var(--ink);border-radius:999px;padding:4px 14px;transform:rotate(4deg);box-shadow:0 4px 0 var(--ink);white-space:nowrap;}
@@ -77,8 +77,8 @@ button:focus-visible{outline:3px solid var(--violet);outline-offset:3px;}
 @keyframes pulse{50%{transform:scale(1.12);border-color:var(--violet);color:var(--violet)}}
 .mini{flex:none;position:relative;width:40px;height:34px;border:2.5px solid var(--ink);
   border-radius:48% 48% 44% 44% / 64% 64% 38% 38%;
-  background:linear-gradient(to top,var(--p) 0 34%,var(--b) 34%);box-shadow:inset -4px -3px 0 rgba(0,0,0,.08);}
-.mini::before,.mini::after{content:"";position:absolute;top:40%;width:5px;height:6px;border-radius:50%;background:var(--ink);}
+  background:linear-gradient(to top,var(--q,var(--p)) 0 26%,var(--b) 26% 62%,var(--p) 62% 74%,#15100e 74%);box-shadow:inset -4px -3px 0 rgba(0,0,0,.12);}
+.mini::before,.mini::after{content:"";position:absolute;top:40%;width:5px;height:6px;border-radius:50%;background:#1a0c0c;box-shadow:0 0 0 2px #fffaf2;}
 .mini::before{left:11px}.mini::after{right:11px}
 .slot .mini{width:50px;height:46px;border-width:3px;}
 .slot .mini::before,.slot .mini::after{width:6px;height:8px;top:36%;}
@@ -269,7 +269,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 }
 </style>
 
-<canvas id="game" tabindex="0" aria-label="Hexfall arena"></canvas>
+<canvas id="game" tabindex="0" aria-label="Hood Niggaz arena"></canvas>
 <div id="vignette" aria-hidden="true"></div>
 <div id="frames" hidden></div>
 <div id="tags"></div>
@@ -278,7 +278,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 <div id="ui">
   <section id="lobby" aria-label="Lobby">
     <header class="brand">
-      <h1 class="logo" aria-label="Hexfall"><span style="--c:#ff4f9a;--r:-6deg;--i:0">H</span><span style="--c:#ffd23f;--r:4deg;--i:1">E</span><span style="--c:#4ea6ff;--r:-3deg;--i:2">X</span><span class="gap" aria-hidden="true"></span><span style="--c:#5fe0a5;--r:5deg;--i:3">F</span><span style="--c:#b07cff;--r:-4deg;--i:4">A</span><span style="--c:#ff8a3c;--r:3deg;--i:5">L</span><span style="--c:#ff4f9a;--r:-5deg;--i:6">L</span></h1>
+      <h1 class="logo" aria-label="Hood Niggaz"><span style="--c:#ff4f9a;--r:-6deg;--i:0">H</span><span style="--c:#ffd23f;--r:4deg;--i:1">O</span><span style="--c:#4ea6ff;--r:-3deg;--i:2">O</span><span style="--c:#5fe0a5;--r:5deg;--i:3">D</span><span class="gap" aria-hidden="true"></span><span style="--c:#b07cff;--r:-4deg;--i:4">N</span><span style="--c:#ff8a3c;--r:3deg;--i:5">I</span><span style="--c:#ff4f9a;--r:-5deg;--i:6">G</span><span style="--c:#ffd23f;--r:4deg;--i:7">G</span><span style="--c:#4ea6ff;--r:-3deg;--i:8">A</span><span style="--c:#5fe0a5;--r:5deg;--i:9">Z</span></h1>
       <p class="tagline">Hop fast. Fall last.</p>
     </header>
     <div class="card">
@@ -305,7 +305,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
         </div>
       </div>
       <div class="pane" id="onlinePane" hidden>
-        <p class="note" id="netOff" hidden>Online play isn't available in this view. Open Hexfall on claude.ai while signed in, and make sure everyone you play with has been given access to it.</p>
+        <p class="note" id="netOff" hidden>Online play isn't available in this view. Open the game on claude.ai while signed in, and make sure everyone you play with has been given access to it.</p>
         <p class="note" id="netWaitApi">Checking for online play…</p>
         <div class="pane" id="netMenu" hidden>
           <button class="btn primary" id="createBtn" type="button">Create a room</button>
@@ -314,7 +314,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
             <input id="codeIn" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Room code">
             <button class="btn" id="joinBtn" type="button">Join</button>
           </div>
-          <p class="note">Everyone opens this Hexfall page on their own computer and joins with the four-letter code. You each get your own screen.</p>
+          <p class="note">Everyone opens this game page on their own computer and joins with the four-letter code. You each get your own screen.</p>
         </div>
         <div class="pane" id="netRoom" hidden>
           <div class="codebox"><span>Room code</span><b id="codeOut">----</b><button class="btn small" id="copyBtn" type="button">Copy</button></div>
@@ -965,7 +965,7 @@ function spawnChunks(x, y, z, cols, power = 1) {
 }
 function spawnLimb(def, isLeg, pos) {
   const L = LIMBS[limbI++ % LIMBS.length];
-  L.skin.color.setHex(def.body); L.foot.color.setHex(new THREE.Color(def.pants).multiplyScalar(0.72).getHex());
+  L.skin.color.setHex(isLeg ? def.pants : def.body); L.foot.color.setHex(0xf4f4f4);
   L.limb.visible = !isLeg; L.leg.visible = isLeg; L.ft.visible = isLeg;
   L.m.visible = true; L.m.position.copy(pos); L.m.rotation.set(Math.random() * 3, Math.random() * 6, Math.random() * 3);
   const a = Math.random() * 6.28; L.vx = Math.cos(a) * 3; L.vz = Math.sin(a) * 3; L.vy = 5; L.sx = (Math.random() - 0.5) * 10; L.sy = (Math.random() - 0.5) * 10;
@@ -1085,7 +1085,7 @@ function updateCorpses(dt, t) {
         cp.phase = 'done'; c.root.visible = false;
         const x = c.root.position.x, y = c.root.position.y + 0.4, z = c.root.position.z, def = cp.p.def;
         spurt(x, y, z, 110, 1.5);
-        const ch = spawnChunks(x, y, z, [[def.body, 1.2], [def.body, 1.0], [def.body, 0.9], [def.body, 1.1], [def.pants, 1.15], [def.pants, 0.85], [0x1d1233, 0.45], [0x1d1233, 0.45]], 1);
+        const ch = spawnChunks(x, y, z, [[def.body, 1.2], [def.body, 1.0], [def.shirt, 0.9], [def.body, 1.1], [def.pants, 1.15], [def.pants, 0.85], [new THREE.Color(def.css).getHex(), 0.7], [0x15100e, 0.45]], 1);
         spawnPool(x, z, 2.2 + Math.random() * 0.6);
         for (let k = 0; k < 4; k++) { const a = Math.random() * 6.28, r = 1.5 + Math.random() * 2.5; spawnPool(x + Math.cos(a) * r, z + Math.sin(a) * r, 0.4 + Math.random() * 0.6); }
         ch[0].held = b; b.carry = ch[0]; b.mode = 'chew'; b.t = 6 + Math.random() * 3; b.cp = null;
@@ -1243,11 +1243,12 @@ function updateDust(dt) {
 }
 
 /* ================= characters ================= */
+// body = skin, pants = jeans, css = bandana color (each player's color everywhere in the UI)
 const PLAYER_DEFS = [
-  { body: 0xffd25e, pants: 0x3f6bff, css: '#3f6bff' },
-  { body: 0xff9fcd, pants: 0x7a3de6, css: '#7a3de6' },
-  { body: 0x8be6c0, pants: 0xff5a3c, css: '#ff5a3c' },
-  { body: 0xa2d3ff, pants: 0xff9a1f, css: '#ff9a1f' },
+  { body: 0x6b4430, pants: 0x3d5f94, shirt: 0xf6f6f6, boxers: 0xbfd6ff, css: '#2f6bff' },
+  { body: 0x4a2e22, pants: 0x2b2b33, shirt: 0xf6f6f6, boxers: 0xffc2c6, css: '#e8323c' },
+  { body: 0x8a5a3c, pants: 0xb59a6e, shirt: 0x2a2a30, boxers: 0xc8f2cf, css: '#22b358' },
+  { body: 0x3b2419, pants: 0x2f4670, shirt: 0xf6f6f6, boxers: 0xe2ccff, css: '#8a3df0' },
 ];
 const prof = new THREE.SplineCurve([
   [0.001, 0], [0.28, 0.0], [0.42, 0.05], [0.49, 0.17], [0.51, 0.34], [0.5, 0.52], [0.45, 0.7], [0.35, 0.86], [0.19, 0.96], [0.001, 1.0]
@@ -1256,7 +1257,7 @@ prof.forEach(v => { v.x = Math.max(0.001, v.x); v.y = Math.max(0, v.y); });
 prof[0].set(0.001, 0); prof[prof.length - 1].set(0.001, 1.0);
 const radAt = y => { for (let i = 1; i < prof.length; i++) if (prof[i].y >= y) { const a = prof[i - 1], b = prof[i]; return a.x + (b.x - a.x) * ((y - a.y) / Math.max(1e-6, b.y - a.y)); } return 0.001; };
 const BODY_GEO = new THREE.LatheGeometry(prof, 48);
-const PANTS_Y = 0.3, LIFT = 0.2, PIVOT = 0.62, CHAR_SCALE = 1.18;
+const PANTS_Y = 0.17, LIFT = 0.2, PIVOT = 0.62, CHAR_SCALE = 1.18;
 const pantsPts = [];
 for (let i = 0; i < prof.length; i++) {
   const v = prof[i];
@@ -1264,13 +1265,37 @@ for (let i = 0; i < prof.length; i++) {
   else { pantsPts.push(new THREE.Vector2(radAt(PANTS_Y) * 1.03 + 0.004, PANTS_Y)); break; }
 }
 const PANTS_GEO = new THREE.LatheGeometry(pantsPts, 48);
+// a band of the profile between two heights, pushed out a little: boxers, shirt, bandana
+function bandGeo(y0, y1, push) {
+  const pts = [];
+  for (let k = 0; k <= 16; k++) { const y = y0 + (y1 - y0) * k / 16; pts.push(new THREE.Vector2(radAt(y) * push + 0.003, y)); }
+  return new THREE.LatheGeometry(pts, 48);
+}
+const BOXERS_GEO = bandGeo(PANTS_Y - 0.01, 0.29, 1.025);
+const SHIRT_GEO = bandGeo(0.27, 0.6, 1.035);
+const BANDANA_GEO = bandGeo(0.76, 0.845, 1.06);
+const SAG_GEO = new THREE.TorusGeometry(1, 0.06, 10, 40);
+// cornrows: braids running front to back over the top of the head
+// for the upper half of the head: the height where the body's radius equals R
+const yAtR = R => { let lo = 0.56, hi = 1.0; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (radAt(m) > R) lo = m; else hi = m; } return (lo + hi) / 2; };
+const CORNROW_GEOS = [-0.24, -0.16, -0.08, 0, 0.08, 0.16, 0.24].map(x => {
+  const Rb = radAt(0.86), zmax = Math.sqrt(Math.max(0, Rb * Rb - x * x)), pts = [];
+  for (let k = 0; k <= 28; k++) {
+    const z = -zmax + 2 * zmax * k / 28, R = Math.hypot(x, z), y = yAtR(R), k2 = R > 1e-4 ? (R + 0.016) / R : 1;
+    pts.push(new THREE.Vector3(x * k2, y + 0.012, z * k2));
+  }
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.03, 8, false);
+});
+const KNOT_GEO = new THREE.SphereGeometry(0.06, 14, 10), TAIL_GEO = new THREE.ConeGeometry(0.05, 0.22, 10);
 const EYE_GEO = new THREE.SphereGeometry(0.068, 16, 12), SHINE_GEO = new THREE.SphereGeometry(0.022, 8, 6);
 const LIMB_GEO = new THREE.SphereGeometry(0.5, 16, 12);
 const LEG_GEO = new THREE.CylinderGeometry(0.075, 0.085, 0.26, 12);
 const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1d1233, roughness: 0.2 });
+const scleraMat = new THREE.MeshPhysicalMaterial({ color: 0xfffaf2, roughness: 0.15, clearcoat: 1 });
+const hairMat = new THREE.MeshPhysicalMaterial({ color: 0x15100e, roughness: 0.45, clearcoat: 0.4 });
 const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const cheekMat = new THREE.MeshBasicMaterial({ color: 0xff7fb0, transparent: true, opacity: 0.7, depthWrite: false });
-const mouthMat = new THREE.MeshBasicMaterial({ color: 0x3a1640 });
+const cheekMat = new THREE.MeshBasicMaterial({ color: 0xd86a6a, transparent: true, opacity: 0.35, depthWrite: false });
+const mouthMat = new THREE.MeshBasicMaterial({ color: 0x1a0c0c });
 
 function makeChar(def) {
   const root = new THREE.Group(), tilt = new THREE.Group(), sq = new THREE.Group();
@@ -1279,12 +1304,24 @@ function makeChar(def) {
   const torso = new THREE.Group(); torso.position.y = LIFT; sq.add(torso);
   const bodyMat = new THREE.MeshPhysicalMaterial({ color: def.body, roughness: 0.34, clearcoat: 0.9, clearcoatRoughness: 0.18, sheen: 0, side: THREE.DoubleSide });
   const pantsMat = new THREE.MeshStandardMaterial({ color: def.pants, roughness: 0.62, side: THREE.DoubleSide });
-  const footMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(def.pants).multiplyScalar(0.72), roughness: 0.6 });
+  const footMat = new THREE.MeshPhysicalMaterial({ color: 0xf4f4f4, roughness: 0.35, clearcoat: 0.6 });  // fresh white kicks
   const body = new THREE.Mesh(BODY_GEO, bodyMat); body.castShadow = true; torso.add(body);
   const pants = new THREE.Mesh(PANTS_GEO, pantsMat); pants.castShadow = true; torso.add(pants);
+  // sagging jeans: waistband sits low, boxers showing above it, tee over the top
+  const band = new THREE.Mesh(SAG_GEO, pantsMat); band.rotation.x = Math.PI / 2; band.position.y = PANTS_Y; band.scale.set(radAt(PANTS_Y) * 1.04, radAt(PANTS_Y) * 1.04, 1); torso.add(band);
+  const boxers = new THREE.Mesh(BOXERS_GEO, new THREE.MeshStandardMaterial({ color: def.boxers, roughness: 0.7, side: THREE.DoubleSide })); torso.add(boxers);
+  const shirt = new THREE.Mesh(SHIRT_GEO, new THREE.MeshStandardMaterial({ color: def.shirt, roughness: 0.75, side: THREE.DoubleSide })); shirt.castShadow = true; torso.add(shirt);
+  // bandana tied round the forehead, knot and tails at the back
+  const bMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(def.css), roughness: 0.5, clearcoat: 0.3, side: THREE.DoubleSide });
+  torso.add(new THREE.Mesh(BANDANA_GEO, bMat));
+  const kz = -radAt(0.8) * 1.06;
+  const knot = new THREE.Mesh(KNOT_GEO, bMat); knot.position.set(0, 0.8, kz - 0.02); torso.add(knot);
+  [-1, 1].forEach(s2 => { const t2 = new THREE.Mesh(TAIL_GEO, bMat); t2.position.set(s2 * 0.05, 0.69, kz - 0.06); t2.rotation.set(-0.35, 0, s2 * 0.35 + Math.PI); torso.add(t2); });
+  CORNROW_GEOS.forEach(g => { const c = new THREE.Mesh(g, hairMat); c.castShadow = true; torso.add(c); });
   for (const s of [-1, 1]) {
     const ey = 0.64, ex = 0.15, ez = Math.sqrt(radAt(ey) ** 2 - ex * ex);
-    const e = new THREE.Mesh(EYE_GEO, eyeMat); e.scale.set(1, 1.28, 0.55); e.position.set(s * ex, ey, ez - 0.006); torso.add(e);
+    const sc = new THREE.Mesh(EYE_GEO, scleraMat); sc.scale.set(1.55, 1.7, 0.5); sc.position.set(s * ex, ey, ez - 0.012); torso.add(sc);
+    const e = new THREE.Mesh(EYE_GEO, eyeMat); e.scale.set(1, 1.28, 0.55); e.position.set(s * ex, ey, ez + 0.004); torso.add(e);
     const sh = new THREE.Mesh(SHINE_GEO, shineMat); sh.position.set(s * ex + 0.022, ey + 0.035, ez + 0.03); torso.add(sh);
     const cy = 0.53, cx = 0.28, cz = Math.sqrt(radAt(cy) ** 2 - cx * cx);
     const ch = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), cheekMat);
@@ -1298,8 +1335,8 @@ function makeChar(def) {
     const a = new THREE.Mesh(LIMB_GEO, bodyMat); a.scale.set(0.11, 0.17, 0.11); a.position.set(s * 0.06, -0.09, 0); a.castShadow = true;
     piv.add(a); sq.add(piv); arms.push(piv);
     const hip = new THREE.Group(); hip.position.set(s * 0.17, LIFT + 0.08, 0);
-    const leg = new THREE.Mesh(LEG_GEO, bodyMat); leg.position.y = -(LIFT + 0.08) / 2 + 0.02; leg.castShadow = true; hip.add(leg);
-    const f = new THREE.Mesh(LIMB_GEO, footMat); f.scale.set(0.17, 0.1, 0.23); f.position.set(0, -(LIFT + 0.08) + 0.05, 0.05); f.castShadow = true;
+    const leg = new THREE.Mesh(LEG_GEO, pantsMat); leg.position.y = -(LIFT + 0.08) / 2 + 0.02; leg.castShadow = true; hip.add(leg);
+    const f = new THREE.Mesh(LIMB_GEO, footMat); f.scale.set(0.18, 0.11, 0.25); f.position.set(0, -(LIFT + 0.08) + 0.05, 0.05); f.castShadow = true;
     hip.add(f); sq.add(hip); feet.push(hip);
   }
   root.visible = false; scene.add(root);
@@ -2134,7 +2171,7 @@ function updateTags() {
     });
   });
 }
-const mini = def => `<span class="mini" style="--b:${hex(def.body)};--p:${def.css}"></span>`;
+const mini = def => `<span class="mini" style="--b:${hex(def.body)};--p:${def.css};--q:${hex(def.pants)}"></span>`;
 const KIND_TEXT = { kb1: 'WASD keys', kb2: 'Arrow keys', touch: 'Touch controls' };
 let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
