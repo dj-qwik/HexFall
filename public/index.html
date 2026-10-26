@@ -1085,7 +1085,7 @@ function updateCorpses(dt, t) {
         cp.phase = 'done'; c.root.visible = false;
         const x = c.root.position.x, y = c.root.position.y + 0.4, z = c.root.position.z, def = cp.p.def;
         spurt(x, y, z, 110, 1.5);
-        const ch = spawnChunks(x, y, z, [[def.body, 1.2], [def.body, 1.0], [def.shirt, 0.9], [def.body, 1.1], [def.pants, 1.15], [def.pants, 0.85], [new THREE.Color(def.css).getHex(), 0.7], [0x15100e, 0.45]], 1);
+        const ch = spawnChunks(x, y, z, [[def.body, 1.2], [def.body, 1.0], [def.body, 0.9], [def.body, 1.1], [def.pants, 1.15], [def.pants, 0.85], [new THREE.Color(def.css).getHex(), 0.7], [0x15100e, 0.45]], 1);
         spawnPool(x, z, 2.2 + Math.random() * 0.6);
         for (let k = 0; k < 4; k++) { const a = Math.random() * 6.28, r = 1.5 + Math.random() * 2.5; spawnPool(x + Math.cos(a) * r, z + Math.sin(a) * r, 0.4 + Math.random() * 0.6); }
         ch[0].held = b; b.carry = ch[0]; b.mode = 'chew'; b.t = 6 + Math.random() * 3; b.cp = null;
@@ -1326,9 +1326,9 @@ function makeChar(def) {
   // sagging jeans: waistband sits low, boxers showing above it, tee over the top
   const band = new THREE.Mesh(SAG_GEO, pantsMat); band.rotation.x = Math.PI / 2; band.position.y = PANTS_Y; band.scale.set(radAt(PANTS_Y) * 1.04, radAt(PANTS_Y) * 1.04, 1); torso.add(band);
   const boxers = new THREE.Mesh(BOXERS_GEO, new THREE.MeshStandardMaterial({ color: def.boxers, roughness: 0.7, side: THREE.DoubleSide })); torso.add(boxers);
-  const tankMat = new THREE.MeshStandardMaterial({ color: def.shirt, roughness: 0.8, side: THREE.DoubleSide });
-  const shirt = new THREE.Mesh(SHIRT_GEO, tankMat); shirt.castShadow = true; torso.add(shirt);
-  const hem = new THREE.Mesh(HEM_GEO, tankMat); hem.rotation.x = Math.PI / 2; hem.position.y = 0.3; hem.scale.set(radAt(0.3) * 1.045, radAt(0.3) * 1.045, 1); torso.add(hem);
+  const tankMat = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.7 });  // white elastic waistband on the boxers
+  // shirtless: the boxers' top band finishes the outfit
+  const topBand = new THREE.Mesh(HEM_GEO, tankMat); topBand.rotation.x = Math.PI / 2; topBand.position.y = 0.315; topBand.scale.set(radAt(0.315) * 1.032, radAt(0.315) * 1.032, 1.4); torso.add(topBand);
   // boxers: stripes so they read as underwear
   const stripeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(def.css), roughness: 0.7 });
   [0.215, 0.27].forEach(y => { const st = new THREE.Mesh(HEM_GEO, stripeMat); st.rotation.x = Math.PI / 2; st.position.y = y; st.scale.set(radAt(y) * 1.032, radAt(y) * 1.032, 0.8); torso.add(st); });
@@ -1350,16 +1350,16 @@ function makeChar(def) {
     const sc = new THREE.Mesh(EYE_GEO, scleraMat); sc.scale.set(1.55, 1.7, 0.5); sc.position.set(s * ex, ey, ez - 0.012); torso.add(sc);
     const e = new THREE.Mesh(EYE_GEO, eyeMat); e.scale.set(1, 1.28, 0.55); e.position.set(s * ex, ey, ez + 0.004); torso.add(e);
     const sh = new THREE.Mesh(SHINE_GEO, shineMat); sh.position.set(s * ex + 0.022, ey + 0.035, ez + 0.03); torso.add(sh);
-    const cy = 0.53, cx = 0.28, cz = Math.sqrt(radAt(cy) ** 2 - cx * cx);
+    const cy = 0.555, cx = 0.28, cz = Math.sqrt(radAt(cy) ** 2 - cx * cx);
     const ch = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), cheekMat);
     ch.position.set(s * cx * 1.012, cy, cz * 1.012); ch.rotation.y = Math.atan2(s * cx, cz); ch.scale.set(1.25, 0.8, 1); torso.add(ch);
   }
-  const mz = radAt(0.555);
+  const mz = radAt(0.51);
   const mouth = new THREE.Mesh(new THREE.CircleGeometry(0.085, 24, Math.PI, Math.PI), mouthMat);
-  mouth.position.set(0, 0.575, mz + 0.004); mouth.scale.set(1, 0.85, 1); torso.add(mouth);
+  mouth.position.set(0, 0.53, mz + 0.004); mouth.scale.set(1, 0.85, 1); torso.add(mouth);
   for (let k = 0; k < 6; k++) {
     const tx = -0.0625 + k * 0.025, t = new THREE.Mesh(GRILL_GEO, k === 2 ? diamondMat : goldMat);
-    t.position.set(tx, 0.564, Math.sqrt(Math.max(0, mz * mz - tx * tx)) + 0.012); t.rotation.y = Math.atan2(tx, mz); torso.add(t);
+    t.position.set(tx, 0.519, Math.sqrt(Math.max(0, mz * mz - tx * tx)) + 0.012); t.rotation.y = Math.atan2(tx, mz); torso.add(t);
   }
   const arms = [], feet = [];
   for (const s of [-1, 1]) {
