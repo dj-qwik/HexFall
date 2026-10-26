@@ -198,6 +198,7 @@ body.touchmode .joinhint{display:none;}
 .tb.jump{right:0;bottom:0;width:96px;height:96px;font-size:22px;background:var(--sun);}
 .tb.dive{right:104px;bottom:6px;width:70px;height:70px;font-size:17px;background:#ff8fbf;}
 .tb.grab{right:22px;bottom:110px;width:70px;height:70px;font-size:17px;background:#9fd3ff;}
+.tb.fire{right:112px;bottom:90px;width:74px;height:74px;font-size:16px;background:#ff5a3c;color:#fff;-webkit-text-stroke:0;}
 .tb.on{transform:translateY(4px) scale(.95);box-shadow:0 1px 0 var(--ink);}
 .tpause{position:absolute;pointer-events:auto;left:max(16px,env(safe-area-inset-left,0px));top:max(72px,calc(env(safe-area-inset-top,0px) + 66px));
   width:44px;height:44px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);box-shadow:0 4px 0 var(--ink);display:grid;place-items:center;padding:0;}
@@ -220,10 +221,23 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 .bubble.fade{opacity:0;}
 @keyframes yell{0%{transform:scale(.2) rotate(-14deg);opacity:0}60%{transform:scale(1.12) rotate(var(--tilt))}100%{transform:scale(1) rotate(var(--tilt));opacity:1}}
 @keyframes shake{from{translate:-2px 0}to{translate:2px 0}}
+/* ---------- crosshairs ---------- */
+#crosses{position:fixed;inset:0;pointer-events:none;z-index:2;}
+.cross{position:absolute;left:0;top:0;width:30px;height:30px;margin:-15px 0 0 -15px;}
+.cross::before,.cross::after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 2px var(--ink);border-radius:2px;}
+.cross::before{left:13px;top:0;width:4px;height:30px;clip-path:polygon(0 0,100% 0,100% 36%,0 36%,0 64%,100% 64%,100% 100%,0 100%);}
+.cross::after{top:13px;left:0;height:4px;width:30px;clip-path:polygon(0 0,36% 0,36% 100%,0 100%,0 0,64% 0,100% 0,100% 100%,64% 100%);}
+.cross i{position:absolute;left:12px;top:12px;width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--ink);}
+.cross.hit::before,.cross.hit::after{background:#ff3b3b;}
+.cross.hit{animation:hitmark .18s ease-out;}
+@keyframes hitmark{from{transform:scale(1.5)}}
 /* ---------- tags over heads ---------- */
 #tags{position:fixed;inset:0;pointer-events:none;overflow:hidden;}
 .tag{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;will-change:transform;}
 .tag span{font-family:var(--display);font-size:15px;color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;line-height:1;}
+.tag .hp{display:block;width:44px;height:7px;margin-top:3px;border:2px solid var(--ink);border-radius:5px;background:#3a1a24;overflow:hidden;}
+.tag .hp u{display:block;height:100%;background:#5fe0a5;transition:width .15s;}
+.tag .hp.low u{background:#ff3b3b;}
 .tag i{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid var(--c);margin-top:3px;filter:drop-shadow(0 2px 0 var(--ink));}
 
 /* ---------- modal panels ---------- */
@@ -272,6 +286,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 <canvas id="game" tabindex="0" aria-label="Hood Niggaz arena"></canvas>
 <div id="vignette" aria-hidden="true"></div>
 <div id="frames" hidden></div>
+<div id="crosses"></div>
 <div id="tags"></div>
 <div id="bubbles" aria-live="polite"></div>
 <div id="confetti"></div>
@@ -337,15 +352,15 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
           <div class="actions"><button class="btn small" id="leaveBtn" type="button">Leave room</button></div>
         </div>
       </div>
-      <p class="tip"><b>PRO TIP</b>Hop, don't run. A tile only drops where your feet land.</p>
+      <p class="tip"><b>PRO TIP</b>Hop, don't run. Ten shots kills, but the pit kills instantly. Shoot them off the edge.</p>
       <details class="howto">
         <summary>Controls</summary>
         <div class="controls">
-          <div class="ctl"><strong>Controller</strong><kbd class="k">A</kbd> join / jump <kbd class="k">X</kbd> dive <kbd class="k">RB</kbd> grab <kbd class="k">Right stick</kbd> look <kbd class="k">LT</kbd>/<kbd class="k">RT</kbd> zoom <kbd class="k">Start</kbd> pause</div>
-          <div class="ctl"><strong>Keyboard 1</strong><kbd class="k">WASD</kbd> move <kbd class="k">Space</kbd> join / jump <kbd class="k">Shift</kbd> dive <kbd class="k">E</kbd> grab</div>
-          <div class="ctl"><strong>Keyboard 2</strong><kbd class="k">Arrows</kbd> move <kbd class="k">/</kbd> join / jump <kbd class="k">.</kbd> dive <kbd class="k">,</kbd> grab</div>
+          <div class="ctl"><strong>Controller</strong><kbd class="k">A</kbd> join / jump <kbd class="k">X</kbd> dive <kbd class="k">RB</kbd> grab <kbd class="k">RT</kbd> shoot <kbd class="k">LT</kbd> aim <kbd class="k">Right stick</kbd> look <kbd class="k">Start</kbd> pause</div>
+          <div class="ctl"><strong>Keyboard 1</strong><kbd class="k">WASD</kbd> move <kbd class="k">Space</kbd> join / jump <kbd class="k">Shift</kbd> dive <kbd class="k">E</kbd> grab <kbd class="k">Q</kbd> shoot</div>
+          <div class="ctl"><strong>Keyboard 2</strong><kbd class="k">Arrows</kbd> move <kbd class="k">/</kbd> join / jump <kbd class="k">.</kbd> dive <kbd class="k">,</kbd> grab <kbd class="k">L</kbd> shoot</div>
           <div class="ctl"><strong>Anywhere</strong><kbd class="k">F</kbd> fullscreen <kbd class="k">M</kbd> music <kbd class="k">B</kbd> / <kbd class="k">Backspace</kbd> leave <kbd class="k">C</kbd> / <kbd class="k">Y</kbd> CPU fill <kbd class="k">V</kbd> / <kbd class="k">X</kbd> CPU skill</div>
-          <div class="ctl"><strong>Mouse</strong>Drag to look around, scroll to zoom</div>
+          <div class="ctl"><strong>Mouse</strong>Click to shoot, drag to aim and look, scroll to zoom</div>
           <div class="ctl"><strong>Phone / tablet</strong>Controls appear on screen. Thumb on the left to move, drag the right side to look.</div>
           <div class="ctl"><strong>Online</strong>Any keyboard layout or controller moves your character.</div>
         </div>
@@ -394,9 +409,10 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
       <button class="tb grab" id="tGrab" type="button" aria-label="Grab">Grab</button>
       <button class="tb dive" id="tDive" type="button" aria-label="Dive">Dive</button>
       <button class="tb jump" id="tJump" type="button" aria-label="Jump">Jump</button>
+      <button class="tb fire" id="tFire" type="button" aria-label="Shoot">Shoot</button>
     </div>
     <button class="tpause" id="tPause" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
-    <p class="thint" id="tHint">Drag left side to move · drag right side to look</p>
+    <p class="thint" id="tHint">Left thumb moves · drag right side to aim · 10 hits and you're dead</p>
   </div>
 </div>
 
@@ -1021,7 +1037,8 @@ function updateBubbles() {
     cp.bubble.classList.toggle('fade', age > BUBBLE_TIME - 0.4);
   });
 }
-function resetChar(c) { c.arms.forEach(a => { a.visible = true; }); c.feet.forEach(f => { f.visible = true; }); c.tilt.rotation.set(0, 0, 0); c.sq.scale.set(1, 1, 1); }
+function resetChar(c) {
+  if (c.gun) { c.gun.visible = true; c.handGun.visible = false; } c.arms.forEach(a => { a.visible = true; }); c.feet.forEach(f => { f.visible = true; }); c.tilt.rotation.set(0, 0, 0); c.sq.scale.set(1, 1, 1); }
 function addCorpse(p) {
   const x = Math.max(-PIT_R + 4, Math.min(PIT_R - 4, p.pos.x)), z = Math.max(-PIT_R + 4, Math.min(PIT_R - 4, p.pos.z));
   const c = p.ch; resetChar(c); c.root.visible = true; c.root.position.set(x, groundY(x, z) + 0.1, z); c.root.rotation.y = Math.random() * 6.28;
@@ -1372,8 +1389,13 @@ function makeChar(def) {
     [0, 1].forEach(k => { const cf = new THREE.Mesh(CUFF_GEO, pantsMat); cf.rotation.x = Math.PI / 2; cf.position.y = -(LIFT + 0.08) + 0.13 + k * 0.06; cf.scale.setScalar(1 - k * 0.06); hip.add(cf); }); // jeans bunched at the ankle
     hip.add(f); sq.add(hip); feet.push(hip);
   }
+  // the same pistol, held out in the hand while shooting
+  const handGun = new THREE.Group();
+  const hs = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.055), steel); hs.position.set(0, -0.36, 0); handGun.add(hs);
+  const hg = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, 0.13), polymer); hg.position.set(0, -0.29, -0.07); hg.rotation.x = 0.25; handGun.add(hg);
+  handGun.visible = false; arms[0].add(handGun);
   root.visible = false; scene.add(root);
-  return { root, tilt, sq, arms, feet };
+  return { root, tilt, sq, arms, feet, gun, handGun };
 }
 const CHARS = PLAYER_DEFS.map(makeChar);
 
@@ -1457,6 +1479,8 @@ const SFX = {
   pop: () => { if (popBudget > 0) return; popBudget = 0.05; tone(380 + Math.random() * 240, 0.12, 'sine', 0.03, 140); },
   dive: () => tone(320, 0.18, 'sawtooth', 0.03, 120),
   grab: () => tone(250, 0.1, 'square', 0.03, 200),
+  gun: far => { noise(0.14, far ? 0.12 : 0.32, 2600); tone(170, 0.14, 'square', far ? 0.025 : 0.06, 55); noise(0.05, far ? 0.08 : 0.2, 5000, 'highpass'); },
+  hit: () => { tone(880, 0.06, 'square', 0.05); noise(0.1, 0.18, 900); },
   thud: () => { tone(95, 0.25, 'sine', 0.1, 45); noise(0.18, 0.14, 380); },
   maul: () => {
     noise(0.7, 0.3, 900); tone(118, 0.7, 'sawtooth', 0.07, 72); tone(123, 0.6, 'sawtooth', 0.05, 80);
@@ -1488,6 +1512,7 @@ function pollPads() {
 }
 function readInput(p) {
   const i = readRaw(p);
+  if (MOUSE.down && MOUSE.player === p) i.fire = true;
   if (p.kind !== 'cpu' && (i.mx || i.mz)) {
     // stick "up" always means "away from the camera", wherever you've swung it
     const yaw = viewOf(p).yaw, c = Math.cos(yaw), s = Math.sin(yaw), x = i.mx, z = i.mz;
@@ -1498,7 +1523,8 @@ function readInput(p) {
 /* ================= touch controls ================= */
 // Phones and tablets get an on-screen stick and buttons. They appear automatically on a touch
 // screen and step aside again if a keyboard or mouse gets used.
-const TOUCH = { mx: 0, mz: 0, jump: false, dive: false, grab: false };
+const TOUCH = { mx: 0, mz: 0, jump: false, dive: false, grab: false, fire: false };
+const MOUSE = { down: false, player: null };
 let touchMode = false;
 try { touchMode = matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
 const smallScreen = () => Math.min(window.innerWidth, window.innerHeight) < 620;
@@ -1514,7 +1540,7 @@ function hasTouchPlayer() {
 function updateTouchUI() {
   const show = touchMode && ['intro', 'countdown', 'play'].includes(state) && !paused && hasTouchPlayer();
   const el = $('#touch'); if (el.hidden === show) el.hidden = !show;
-  if (!show) { TOUCH.mx = TOUCH.mz = 0; TOUCH.jump = TOUCH.dive = TOUCH.grab = false; }
+  if (!show) { TOUCH.mx = TOUCH.mz = 0; TOUCH.jump = TOUCH.dive = TOUCH.grab = TOUCH.fire = false; }
   $('#tPause').hidden = !!NET.room;
   $('#tHint').style.opacity = state === 'intro' || (state === 'countdown') || roundT < 4 ? 1 : 0;
 }
@@ -1548,7 +1574,7 @@ function updateTouchUI() {
     btn.addEventListener('pointerup', off); btn.addEventListener('pointercancel', off); btn.addEventListener('lostpointercapture', off);
     btn.addEventListener('contextmenu', e => e.preventDefault());
   };
-  hold($('#tJump'), 'jump'); hold($('#tDive'), 'dive'); hold($('#tGrab'), 'grab');
+  hold($('#tJump'), 'jump'); hold($('#tDive'), 'dive'); hold($('#tGrab'), 'grab'); hold($('#tFire'), 'fire');
   $('#tPause').addEventListener('click', () => setPaused(true));
   window.addEventListener('touchstart', () => setTouchMode(true), { passive: true });
   window.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && (Math.abs(e.movementX) + Math.abs(e.movementY)) > 2) setTouchMode(false); });
@@ -1564,8 +1590,8 @@ function readRaw(p) {
   if (p.kind === 'any') {
     const all = [readKind({ kind: 'kb1' }), readKind({ kind: 'kb2' }), readKind({ kind: 'touch' })];
     pads.forEach((gp, i) => { if (gp) all.push(readKind({ kind: 'pad', pad: i })); });
-    const o = { mx: 0, mz: 0, jump: false, dive: false, grab: false };
-    all.forEach(a => { o.mx += a.mx; o.mz += a.mz; o.jump = o.jump || a.jump; o.dive = o.dive || a.dive; o.grab = o.grab || a.grab; });
+    const o = { mx: 0, mz: 0, jump: false, dive: false, grab: false, fire: false };
+    all.forEach(a => { o.mx += a.mx; o.mz += a.mz; o.jump = o.jump || a.jump; o.dive = o.dive || a.dive; o.grab = o.grab || a.grab; o.fire = o.fire || a.fire; });
     const l = Math.hypot(o.mx, o.mz); if (l > 1) { o.mx /= l; o.mz /= l; }
     return o;
   }
@@ -1575,12 +1601,12 @@ function readKind(p) {
   const inp = { mx: 0, mz: 0, jump: false, dive: false, grab: false };
   if (p.kind === 'kb1') {
     inp.mx = (K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0); inp.mz = (K.KeyS ? 1 : 0) - (K.KeyW ? 1 : 0);
-    inp.jump = !!K.Space; inp.dive = !!(K.ShiftLeft || K.ShiftRight && (NET.room || !hasKb2())); inp.grab = !!K.KeyE;
+    inp.jump = !!K.Space; inp.dive = !!(K.ShiftLeft || K.ShiftRight && (NET.room || !hasKb2())); inp.grab = !!K.KeyE; inp.fire = !!K.KeyQ;
   } else if (p.kind === 'kb2') {
     inp.mx = (K.ArrowRight ? 1 : 0) - (K.ArrowLeft ? 1 : 0); inp.mz = (K.ArrowDown ? 1 : 0) - (K.ArrowUp ? 1 : 0);
-    inp.jump = !!K.Slash; inp.dive = !!K.Period; inp.grab = !!K.Comma;
+    inp.jump = !!K.Slash; inp.dive = !!K.Period; inp.grab = !!K.Comma; inp.fire = !!K.KeyL;
   } else if (p.kind === 'touch') {
-    inp.mx = TOUCH.mx; inp.mz = TOUCH.mz; inp.jump = TOUCH.jump; inp.dive = TOUCH.dive; inp.grab = TOUCH.grab;
+    inp.mx = TOUCH.mx; inp.mz = TOUCH.mz; inp.jump = TOUCH.jump; inp.dive = TOUCH.dive; inp.grab = TOUCH.grab; inp.fire = TOUCH.fire;
   } else if (p.kind === 'pad') {
     const gp = pads[p.pad];
     if (gp) {
@@ -1588,7 +1614,7 @@ function readKind(p) {
       if (Math.hypot(x, z) < 0.22) { x = 0; z = 0; }
       if (btn(gp, 14)) x = -1; if (btn(gp, 15)) x = 1; if (btn(gp, 12)) z = -1; if (btn(gp, 13)) z = 1;
       inp.mx = x; inp.mz = z;
-      inp.jump = btn(gp, 0); inp.dive = btn(gp, 2) || btn(gp, 1); inp.grab = btn(gp, 5) || btn(gp, 4);
+      inp.jump = btn(gp, 0); inp.dive = btn(gp, 2) || btn(gp, 1); inp.grab = btn(gp, 5) || btn(gp, 4); inp.fire = btn(gp, 7);
     }
   }
   const l = Math.hypot(inp.mx, inp.mz); if (l > 1) { inp.mx /= l; inp.mz /= l; }
@@ -1639,6 +1665,8 @@ function stepPlayer(p, inp, dt) {
   const jumpEdge = inp.jump && !p.prevJump, diveEdge = inp.dive && !p.prevDive;
   p.prevJump = inp.jump; p.prevDive = inp.dive;
   p.grabCd = Math.max(0, p.grabCd - dt);
+  p.fireCd = Math.max(0, (p.fireCd || 0) - dt); p.fireT = Math.max(0, (p.fireT || 0) - dt); p.hitT = Math.max(0, (p.hitT || 0) - dt);
+  if (inp.fire && p.fireCd <= 0 && state === 'play') shoot(p);
 
   // grab
   if (inp.grab && !p.grab && !p.diving && p.grabCd <= 0) {
@@ -1670,7 +1698,7 @@ function stepPlayer(p, inp, dt) {
     const a = (p.grounded ? ACC_G : ACC_A) * dt;
     p.vel.x = approach(p.vel.x, inp.mx * speed, a);
     p.vel.z = approach(p.vel.z, inp.mz * speed, a);
-    if (Math.hypot(inp.mx, inp.mz) > 0.15) p.targetYaw = Math.atan2(inp.mx, inp.mz);
+    if (p.fireT > 0) p.targetYaw = p.aimYaw; else if (Math.hypot(inp.mx, inp.mz) > 0.15) p.targetYaw = Math.atan2(inp.mx, inp.mz);
     if (jumpEdge && (p.grounded || p.coyote > 0)) {
       p.vel.y = JUMP; p.grounded = false; p.coyote = 0; p.sqk = -0.2; p.sqv = 0; SFX.jump();
     } else if (diveEdge) {
@@ -1739,6 +1767,139 @@ function eliminate(p) {
   if (p.pos.y < layerY(LAYERS - 1) - 1) addCorpse(p); else p.ch.root.visible = false;
   eliminated.push(p);
   renderHud();
+}
+
+/* ----- guns ----- */
+// Everyone aims with their camera: a crosshair sits in the middle of their view and the camera
+// looks over the shoulder. Shots are fast tracers; a hit shoves the target and takes 1 of 10 health.
+// The tenth hit kills. Falling into the pit still kills straight away.
+const MAX_HP = 10, FIRE_CD = 0.3, BULLET_SPEED = 70, BULLET_LIFE = 0.75, HIT_R = 0.62, KNOCK = 6.5;
+const TRACERS = [];
+{
+  const g = new THREE.CylinderGeometry(0.035, 0.035, 1.3, 6); g.rotateX(Math.PI / 2);
+  const m = new THREE.MeshBasicMaterial({ color: 0xfff1a0 }), fg = new THREE.SphereGeometry(0.16, 10, 8), fm = new THREE.MeshBasicMaterial({ color: 0xffc23a });
+  for (let i = 0; i < 48; i++) {
+    const mesh = new THREE.Mesh(g, m); mesh.visible = false; scene.add(mesh);
+    const flash = new THREE.Mesh(fg, fm); flash.visible = false; scene.add(flash);
+    TRACERS.push({ mesh, flash, pos: new THREE.Vector3(), dir: new THREE.Vector3(), life: 0, fl: 0, owner: null, live: false });
+  }
+}
+let tracerI = 0, shotId = 0;
+const _o = new THREE.Vector3(), _d = new THREE.Vector3(), _c2 = new THREE.Vector3(), _aim = new THREE.Vector3();
+function chestOf(p, out) { return out.set(p.pos.x, p.pos.y + 0.95, p.pos.z); }
+// distance along a ray to a sphere, or -1
+function raySphere(o, d, c, r) {
+  const ox = o.x - c.x, oy = o.y - c.y, oz = o.z - c.z, b = ox * d.x + oy * d.y + oz * d.z, cc = ox * ox + oy * oy + oz * oz - r * r, h = b * b - cc;
+  if (h < 0) return -1; const t = -b - Math.sqrt(h); return t >= 0 ? t : (-b + Math.sqrt(h) >= 0 ? 0 : -1);
+}
+// where the shooter's crosshair points: the first player on the camera's centre line, or chest height ahead
+function aimPoint(p, out) {
+  const v = viewOf(p), o = v.cam.position; _d.copy(v.target).sub(o).normalize();
+  let best = 1e9;
+  players.forEach(q => { if (q === p || !q.alive) return; const t = raySphere(o, _d, chestOf(q, _c2), HIT_R + 0.25); if (t > 0 && t < best) best = t; });
+  if (best < 1e9) return out.copy(o).add(_d.clone().multiplyScalar(best));
+  const yp = p.pos.y + 0.95;
+  if (_d.y < -0.02) { const t = (yp - o.y) / _d.y; out.copy(o).add(_d.clone().multiplyScalar(t)); }
+  else out.copy(o).add(_d.clone().multiplyScalar(60));
+  // never aim at a spot right under your own feet: push it out along the view direction
+  const fx = _d.x, fz = _d.z, fl = Math.hypot(fx, fz) || 1, dx = out.x - p.pos.x, dz = out.z - p.pos.z;
+  if (Math.hypot(dx, dz) < 3) { out.x = p.pos.x + fx / fl * 6; out.z = p.pos.z + fz / fl * 6; out.y = yp; }
+  return out;
+}
+function spawnTracer(owner, o, d, live) {
+  const T = TRACERS[tracerI++ % TRACERS.length];
+  T.pos.copy(o); T.dir.copy(d); T.life = BULLET_LIFE; T.fl = 0.06; T.owner = owner; T.live = live;
+  T.mesh.visible = true; T.mesh.position.copy(o); T.mesh.lookAt(o.x + d.x, o.y + d.y, o.z + d.z);
+  T.flash.visible = true; T.flash.position.copy(o);
+}
+function shoot(p) {
+  p.fireCd = FIRE_CD; p.fireT = 0.55;
+  aimPoint(p, _aim);
+  const yaw = Math.atan2(_aim.x - p.pos.x, _aim.z - p.pos.z); p.aimYaw = yaw; p.targetYaw = yaw;
+  _o.set(p.pos.x + Math.sin(yaw) * 0.55, p.pos.y + 1.0, p.pos.z + Math.cos(yaw) * 0.55);
+  _d.copy(_aim).sub(_o).normalize();
+  spawnTracer(p, _o, _d, true);
+  SFX.gun();
+  if (NET.room && p.isMe) { NET.shots.push([++shotId, r2(_o.x), r2(_o.y), r2(_o.z), r2(_d.x), r2(_d.y), r2(_d.z), -1]); if (NET.shots.length > 8) NET.shots.shift(); }
+}
+// a player this screen is in charge of: your own character, local players, and CPUs on the host
+const simulatesHere = q => !q.remote;
+function takeHit(q, dx, dz, from) {
+  if (!q.alive || state !== 'play') return;
+  q.hp = Math.max(0, (q.hp == null ? MAX_HP : q.hp) - 1); q.hitT = 0.25;
+  const l = Math.hypot(dx, dz) || 1;
+  q.vel.x += dx / l * KNOCK; q.vel.z += dz / l * KNOCK; q.vel.y = Math.max(q.vel.y, 4.2); q.grounded = false; q.sqv += 4;
+  spurt(q.pos.x, q.pos.y + 0.9, q.pos.z, 9, 0.5, dx / l * 2, dz / l * 2);
+  SFX.hit();
+  if (q.hp <= 0) shotDead(q, dx / l, dz / l);
+}
+function shotDead(q, dx, dz) {
+  const x = q.pos.x, y = q.pos.y + 0.8, z = q.pos.z, def = q.def;
+  spurt(x, y, z, 70, 1.3, dx * 3, dz * 3);
+  spawnChunks(x, y, z, [[def.body, 1.1], [def.body, 0.9], [def.body, 1.0], [def.pants, 1.0], [def.pants, 0.8], [new THREE.Color(def.css).getHex(), 0.7], [0x15100e, 0.45]], 1);
+  SFX.maul();
+  q.deathPos = new THREE.Vector3(x, y, z); q.lingerUntil = clock + 2.4;
+  eliminate(q);
+}
+function updateTracers(dt) {
+  for (const T of TRACERS) {
+    if (T.fl > 0) { T.fl -= dt; if (T.fl <= 0) T.flash.visible = false; }
+    if (T.life <= 0) continue;
+    T.life -= dt;
+    const step = BULLET_SPEED * dt;
+    if (T.live) {
+      let hit = null, ht = step;
+      players.forEach(q => { if (q === T.owner || !q.alive) return; const t = raySphere(T.pos, T.dir, chestOf(q, _c2), HIT_R); if (t >= 0 && t < ht) { ht = t; hit = q; } });
+      if (hit) {
+        T.life = 0; T.mesh.visible = false;
+        if (simulatesHere(hit)) takeHit(hit, T.dir.x, T.dir.z, T.owner);
+        else if (NET.room && T.owner && T.owner.isMe) { const last = NET.shots[NET.shots.length - 1]; if (last) last[7] = hit.i; }
+        if (T.owner && !T.owner.remote) { const v = viewOf(T.owner); if (v && v.cross) { v.cross.classList.remove('hit'); void v.cross.offsetWidth; v.cross.classList.add('hit'); } }
+        continue;
+      }
+    }
+    T.pos.addScaledVector ? T.pos.addScaledVector(T.dir, step) : T.pos.add(T.dir.clone().multiplyScalar(step));
+    T.mesh.position.copy(T.pos);
+    if (T.life <= 0 || T.pos.y < SLIME_Y) { T.life = 0; T.mesh.visible = false; }
+  }
+}
+// shots from other online players: draw their tracers, and take the hits they landed on us
+function readShots(peer, s) {
+  if (!s || !Array.isArray(s.sh)) return;
+  const seen = NET.shotSeen[peer] || 0; let top = seen;
+  const shooter = players[NET.ro.findIndex(r => r[0] === peer)];
+  s.sh.forEach(sh => {
+    if (!Array.isArray(sh) || sh.length < 8 || typeof sh[0] !== 'number' || sh[0] <= seen) return;
+    top = Math.max(top, sh[0]);
+    _o.set(num(sh[1]), num(sh[2]), num(sh[3])); _d.set(num(sh[4]), num(sh[5]), num(sh[6]));
+    if (_d.lengthSq && _d.lengthSq() < 0.5) return;
+    spawnTracer(shooter || null, _o, _d, false);
+    if (shooter) { shooter.fireT = 0.55; shooter.aimYaw = Math.atan2(_d.x, _d.z); }
+    SFX.gun(true);
+    const tgt = players[num(sh[7], -1) | 0];
+    if (tgt && simulatesHere(tgt)) takeHit(tgt, _d.x, _d.z, shooter);
+  });
+  NET.shotSeen[peer] = top;
+}
+
+// crosshairs: one per view, in the middle, for whoever that view belongs to
+const CROSSES = [0, 1, 2, 3].map(() => { const el = document.createElement('div'); el.className = 'cross'; el.hidden = true; el.innerHTML = '<i></i>'; $('#crosses').appendChild(el); return el; });
+function aimOwner(v) {
+  if (!(state === 'play' || state === 'countdown')) return null;
+  if (v.kind === 'player') return v.player.alive ? v.player : null;
+  if (v.kind !== 'main') return null;
+  if (NET.room) { const me = players.find(p => p.isMe); return me && me.alive ? me : null; }
+  const alive = players.filter(p => p.alive && isHuman(p) && !p.remote);
+  return alive.length === 1 ? alive[0] : null;
+}
+function updateCrosses() {
+  CROSSES.forEach((el, i) => {
+    const v = views[i], owner = v && aimOwner(v);
+    if (v) v.cross = el;
+    if (!owner) { el.hidden = true; return; }
+    el.hidden = false; el.style.setProperty('--c', owner.def.css);
+    el.style.transform = `translate(${v.rect.x + v.rect.w / 2}px, ${v.rect.y + v.rect.h / 2}px)`;
+  });
 }
 
 /* ----- bots ----- */
@@ -1952,6 +2113,8 @@ function animChar(p, dt, t) {
   else if (p.grab) { axL = axR = -1.45; azL = 0.25; azR = -0.25; }
   else if (!p.grounded) { axL = axR = -0.3 + Math.sin(t * 22) * 0.25; azL = -1.9; azR = 1.9; }
   else { axL = Math.sin(p.phase) * 0.9 * run; axR = -axL; azL = -0.18 - Math.sin(t * 2 + p.i) * 0.04; azR = -azL; }
+  if (p.fireT > 0) { axL = -1.55; azL = 0.05; }
+  if (c.gun) { c.gun.visible = !(p.fireT > 0); c.handGun.visible = p.fireT > 0; }
   const k = 1 - Math.exp(-18 * dt);
   al.rotation.x += (axL - al.rotation.x) * k; ar.rotation.x += (axR - ar.rotation.x) * k;
   al.rotation.z += (azL - al.rotation.z) * k; ar.rotation.z += (azR - ar.rotation.z) * k;
@@ -2094,8 +2257,7 @@ function padLook(dt) {
     if (Math.abs(rx) > 0.18) v.yaw -= rx * 2.6 * dt;
     if (Math.abs(ry) > 0.18) v.pitch += ry * 1.6 * dt;
     const lt = gp.buttons[6] ? gp.buttons[6].value : 0, rt = gp.buttons[7] ? gp.buttons[7].value : 0;
-    if (lt > 0.08) v.zoom *= Math.exp(-lt * 1.4 * dt);
-    if (rt > 0.08) v.zoom *= Math.exp(rt * 1.4 * dt);
+    v.aimHeld = lt > 0.15;  // LT: hold to aim (zooms in); RT fires
     clampView(v);
   });
 }
@@ -2117,7 +2279,13 @@ function updateView(v, dt) {
   if (v.kind === 'overview') { d = 44; c.set(0, Math.max(SLIME_Y + 4, c.y - 3), 0); v.yaw += dt * 0.08; }
   if (state === 'over' && winners.length === 1 && v.kind === 'main') d = 8.5;
   if (pts.length === 1 && pts[0].close) d = 10;
-  d *= v.zoom;
+  v.aimZ = (v.aimZ || 1) + ((v.aimHeld ? 0.6 : 1) - (v.aimZ || 1)) * (1 - Math.exp(-10 * dt));
+  d *= v.zoom * v.aimZ;
+  // over the shoulder: look a little right of and ahead of whoever is aiming
+  if (aimOwner(v)) {
+    const sy = Math.sin(v.yaw), cy = Math.cos(v.yaw);
+    c.x += cy * 0.9 - sy * 2.2; c.z += -sy * 0.9 - cy * 2.2; c.y += 0.5;
+  }
   c.y = Math.max(c.y, SLIME_Y + 3) + 0.4;
   if (state === 'intro' && v.kind === 'main') {
     // sweep up the tower from the bottom floor, circling once and a half, and land on the normal view
@@ -2186,7 +2354,7 @@ const viewAt = (x, y) => views.find(v => x >= v.rect.x && x < v.rect.x + v.rect.
 /* ================= HUD / DOM ================= */
 const tagPool = [0, 1, 2, 3].map(() => PLAYER_DEFS.map(def => {
   const el = document.createElement('div'); el.className = 'tag'; el.style.setProperty('--c', def.css);
-  el.innerHTML = '<span></span><i></i>'; el.hidden = true; $('#tags').appendChild(el); return el;
+  el.innerHTML = '<span></span><b class="hp"><u></u></b><i></i>'; el.hidden = true; $('#tags').appendChild(el); return el;
 }));
 const allTags = fn => tagPool.forEach(row => row.forEach(fn));
 function updateTags() {
@@ -2201,6 +2369,8 @@ function updateTags() {
       if (v3.z > 1 || x < r.x + 4 || x > r.x + r.w - 4 || y < r.y + 24 || y > r.y + r.h) { el.hidden = true; return; }
       el.hidden = false;
       el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      const hp = p.hp == null ? MAX_HP : p.hp, bar = el.querySelector('.hp');
+      if (bar && bar.dataset.hp !== String(hp)) { bar.dataset.hp = String(hp); bar.hidden = hp >= MAX_HP; bar.querySelector('u').style.width = (hp / MAX_HP * 100) + '%'; bar.classList.toggle('low', hp <= 3); }
     });
   });
 }
@@ -2336,7 +2506,7 @@ function toLobby() {
 function placeAtSpawn(p) {
   const [x, z] = spawnPoint(p.i); p.pos.set(x, 0, z);
   p.yaw = p.targetYaw = Math.atan2(-x, -z);
-  resetChar(p.ch); p.ch.root.visible = true; p.ch.root.scale.setScalar(1); p.ch.root.position.copy(p.pos); p.lingerUntil = 0; p.deathPos = null;
+  p.hp = MAX_HP; resetChar(p.ch); p.ch.root.visible = true; p.ch.root.scale.setScalar(1); p.ch.root.position.copy(p.pos); p.lingerUntil = 0; p.deathPos = null;
 }
 function beginRoundUI() {
   nextMatchTrack(); clearGore();
@@ -2359,7 +2529,7 @@ function startRound() {
     if (NET.role !== 'host') return;
     if (!NET.myPeer) { toast('Still connecting to the room. Try again in a second.'); return; }
     resetArena((Math.random() * 1e9) | 0);
-    NET.rid++; NET.ro = hostRoster(); NET.touchLog = [];
+    NET.rid++; NET.ro = hostRoster(); NET.touchLog = []; NET.shots = []; NET.shotSeen = {};
     players = NET.ro.map(([peer, k], i) => {
       if (k === 'c') return makePlayer(i, 'cpu');
       if (peer === NET.myPeer) { const p = makePlayer(i, 'any'); p.isMe = true; p.name = 'P' + (i + 1); return p; }
@@ -2444,7 +2614,7 @@ function toggleFS() {
 const NET = {
   api: null, ready: false, mode: 'local', room: null, role: null, code: '', myPeer: null,
   rid: 0, ro: [], hostG: null, hostSeenAt: 0, everSawHost: false, joinedAt: 0, guestOrder: [],
-  touchLog: [], unsub: [], lastRoKey: '', lastCd: -1
+  touchLog: [], unsub: [], lastRoKey: '', lastCd: -1, shots: [], shotSeen: {}
 };
 // Where online rooms come from: inside Claude, the artifact's room feature; anywhere else
 // (your own server on Render), a WebSocket at /ws on the same site that speaks the same shape.
@@ -2590,7 +2760,7 @@ function renderOnline() {
 
 function packBody(p) {
   const f = (p.alive ? 1 : 0) | (p.grounded ? 2 : 0) | (p.diving ? 4 : 0);
-  return [p.i, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.vel.x), r2(p.vel.y), r2(p.vel.z), f, p.layer, p.grab ? p.grab.i : -1];
+  return [p.i, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.vel.x), r2(p.vel.y), r2(p.vel.z), f, p.layer, p.grab ? p.grab.i : -1, p.hp == null ? MAX_HP : p.hp];
 }
 function applyBody(p, b) {
   if (!p || !Array.isArray(b) || b.length < 11) return;
@@ -2603,6 +2773,7 @@ function applyBody(p, b) {
   const L = num(b[9]) | 0; if (L >= 0 && L < LAYERS) p.layer = L;
   const gs = num(b[10], -1) | 0;
   p.grab = gs >= 0 && gs !== p.i && players[gs] ? players[gs] : null;
+  if (typeof b[11] === 'number') p.hp = Math.max(0, Math.min(MAX_HP, b[11] | 0));
   if (!(f & 1) && p.alive && state === 'play') { p.pos.set(tx, ty, tz); eliminate(p); }
 }
 function smoothRemote(dt) {
@@ -2642,7 +2813,7 @@ function applyTiles(b64, hard) {
 
 function myState() {
   const me = players.find(p => p.isMe);
-  return me && state !== 'lobby' ? { r: NET.rid, b: packBody(me), tl: NET.touchLog } : null;
+  return me && state !== 'lobby' ? { r: NET.rid, b: packBody(me), tl: NET.touchLog, sh: NET.shots } : null;
 }
 
 function netTick(dt) {
@@ -2659,6 +2830,7 @@ function netTick(dt) {
         seen.add(slot); players[slot].lastSeenAt = performance.now();
         const s = pr.s; if (!s || s.r !== NET.rid) return;
         applyBody(players[slot], s.b);
+        if (state === 'play') readShots(pe.peer, s);
         if (state === 'play' && Array.isArray(s.tl)) s.tl.forEach(id => {
           if (typeof id !== 'number') return;
           const L = (id / 1000) | 0, i = id % 1000;
@@ -2707,6 +2879,7 @@ function netTick(dt) {
         const s = pe.presence && pe.presence.s; if (!s || s.r !== NET.rid) return;
         const slot = NET.ro.findIndex(r => r[0] === pe.peer); if (slot < 0) return;
         const p = players[slot]; if (p && p.remote) applyBody(p, s.b);
+        if (state === 'play') readShots(pe.peer, s);
       });
       if (typeof g.al === 'number' && state === 'play') players.forEach(p => { if (p.remote && p.alive && !(g.al & (1 << p.i))) eliminate(p); });
       if (ph === 'cd' && state === 'intro') { state = 'countdown'; introT = INTRO; }
@@ -2726,7 +2899,7 @@ function netTick(dt) {
 }
 
 function guestStartRound(g) {
-  NET.rid = g.rid; NET.ro = Array.isArray(g.ro) ? g.ro.slice(0, 4) : []; NET.touchLog = []; NET.lastCd = -1;
+  NET.rid = g.rid; NET.ro = Array.isArray(g.ro) ? g.ro.slice(0, 4) : []; NET.touchLog = []; NET.lastCd = -1; NET.shots = []; NET.shotSeen = {};
   players = NET.ro.map((r, i) => {
     const k = Array.isArray(r) ? r[1] : 'c', peer = Array.isArray(r) ? r[0] : '';
     if (k !== 'c' && peer && peer === NET.myPeer) { const p = makePlayer(i, 'any'); p.isMe = true; p.name = 'P' + (i + 1); return p; }
@@ -2781,6 +2954,11 @@ $('#copyBtn').addEventListener('click', () => {
 window.addEventListener('pointerdown', initAudio);
 {
   const cv = $('#game'); let drag = null;
+  cv.addEventListener('pointerdown', e => {
+    if (state === 'play' && e.pointerType === 'mouse' && e.button === 0) {
+      const v = viewAt(e.clientX, e.clientY), owner = aimOwner(v); if (owner) { MOUSE.down = true; MOUSE.player = owner; }
+    }
+  });
   cv.addEventListener('pointerdown', e => { if (state === 'lobby') return; drag = { x: e.clientX, y: e.clientY, v: viewAt(e.clientX, e.clientY) }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} });
   cv.addEventListener('pointermove', e => {
     if (!drag) return;
@@ -2788,7 +2966,7 @@ window.addEventListener('pointerdown', initAudio);
     v.yaw -= (e.clientX - drag.x) * 0.006; v.pitch += (e.clientY - drag.y) * 0.004; clampView(v);
     drag.x = e.clientX; drag.y = e.clientY;
   });
-  const end = () => { drag = null; };
+  const end = () => { drag = null; MOUSE.down = false; };
   cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
   cv.addEventListener('wheel', e => {
     if (state === 'lobby') return;
@@ -2904,6 +3082,7 @@ function frame(now) {
         collide();
         updateTiles(h);
       }
+      updateTracers(dt);
       const alive = players.filter(p => p.alive);
       const remain = TIME_LIMIT - roundT;
       if (remain <= 30) { show('#timer', true); $('#timer').textContent = Math.max(0, Math.ceil(remain)) + 's'; }
@@ -2945,6 +3124,7 @@ function frame(now) {
   updateCameras(dt);
   updateTags();
   updateBubbles();
+  updateCrosses();
   renderViews();
   requestAnimationFrame(frame);
 }
