@@ -353,7 +353,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
           <div class="actions"><button class="btn small" id="leaveBtn" type="button">Leave room</button></div>
         </div>
       </div>
-      <p class="tip"><b>PRO TIP</b>Hop, don't run. A shot stuns people and drops them a floor. Keep shooting and they'll run out of floors.</p>
+      <p class="tip"><b>PRO TIP</b>Hop, don't run. A shot stuns people and drops them a floor. Shoot up at the floor above to knock tiles out from under them.</p>
       <details class="howto">
         <summary>Controls</summary>
         <div class="controls">
@@ -1859,6 +1859,7 @@ function eliminate(p) {
 // Everyone aims with their camera: a crosshair sits in the middle of their view and the camera
 // looks over the shoulder. Shots are fast tracers; a hit stuns the target so they drop through
 // their floor. There's no health: the only way to die is the pit.
+const TILE_UNDER = 0.46;   // the underside of a tile, below its walking surface
 const FIRE_CD = 0.3, BULLET_SPEED = 55, BULLET_LIFE = 0.95, HIT_R = 0.62, KNOCK = 6.5;
 // a bright white-hot core inside a glowing sleeve in the shooter's color, a long streak behind it,
 // a big muzzle flash, and a burst wherever it lands so you can see exactly where you're hitting
@@ -1911,6 +1912,13 @@ function aimPoint(p, out) {
   const v = viewOf(p), o = v.cam.position; _d.copy(v.target).sub(o).normalize();
   let best = 120;
   players.forEach(q => { if (q === p || !q.alive) return; const t = raySphere(o, _d, chestOf(q, _c2), HIT_R + 0.1); if (t > 0 && t < best) best = t; });
+  // looking up: the underside of a tile on a floor above you is a target
+  if (_d.y > 0.001) for (let L = LAYERS - 1; L >= 0; L--) {
+    const yb = layerY(L) - TILE_UNDER; if (yb <= p.pos.y + 1.2) continue;
+    const t = (yb - o.y) / _d.y; if (t <= 0 || t >= best) continue;
+    const i = tileAt(L, o.x + _d.x * t, o.z + _d.z * t);
+    if (i >= 0 && layers[L].state[i] < 2) { best = t; break; }   // flashing tiles still block
+  }
   if (_d.y < -0.001) for (let L = 0; L < LAYERS; L++) {
     if (v.op[L] < 0.5 || layerY(L) > p.pos.y + 0.6) continue;   // floors above you (shown or fading) never block your aim
     const t = (layerY(L) - o.y) / _d.y; if (t <= 0 || t >= best) continue;
@@ -1996,6 +2004,22 @@ function updateTracers(dt) {
         const yl = layerY(L); if (!(y0 >= yl && y1 < yl)) continue;
         const t = (yl - y0) / T.dir.y, x = T.pos.x + T.dir.x * t, z = T.pos.z + T.dir.z * t, i = tileAt(L, x, z);
         if (i >= 0 && layers[L].state[i] < 2) { impact(x, yl, z, T.color, true); stopped = true; }
+      }
+      if (stopped) { T.life = 0; T.mesh.visible = false; continue; }
+    } else if (T.dir.y > 0) {
+      // going up: the first tile it meets from underneath gets knocked loose, as if someone stepped on it
+      let stopped = false;
+      for (let L = LAYERS - 1; L >= 0 && !stopped; L--) {
+        const yb = layerY(L) - TILE_UNDER; if (!(y0 <= yb && y1 > yb)) continue;
+        const t = (yb - y0) / T.dir.y, x = T.pos.x + T.dir.x * t, z = T.pos.z + T.dir.z * t, i = tileAt(L, x, z);
+        if (i >= 0 && layers[L].state[i] < 2) {
+          impact(x, yb, z, T.color, false);
+          if (T.live && layers[L].state[i] === 0) {
+            touchTile(L, i); SFX.crunch();
+            if (NET.room && T.owner && T.owner.isMe && NET.role === 'guest') { const id = L * 1000 + i; if (!NET.touchLog.includes(id)) { NET.touchLog.push(id); if (NET.touchLog.length > 12) NET.touchLog.shift(); } }
+          }
+          stopped = true;
+        }
       }
       if (stopped) { T.life = 0; T.mesh.visible = false; continue; }
     }
@@ -2269,7 +2293,7 @@ function animChar(p, dt, t) {
   else { axL = Math.sin(p.phase) * 0.9 * run; axR = -axL; azL = -0.18 - Math.sin(t * 2 + p.i) * 0.04; azR = -azL; }
   if (p.fireT > 0) { axL = -1.55; azL = 0.05; }
   if (c.gun) { c.gun.visible = !(p.fireT > 0); c.handGun.visible = p.fireT > 0; }
-  const stunned = p.stunT > 0 || p.stunVis;
+  const stunned = !!(p.stunT > 0 || p.stunVis);
   if (c.stars) { c.stars.visible = stunned; if (stunned) { c.stars.rotation.y += dt * 7; c.stars.children.forEach((st, k) => { st.rotation.y += dt * 9; st.rotation.x += dt * 5; }); } }
   if (stunned) { axL = -0.2 + Math.sin(t * 9) * 0.25; axR = 0.2 - Math.sin(t * 9 + 1) * 0.25; azL = -0.5; azR = 0.5; }
   const k = 1 - Math.exp(-18 * dt);
@@ -2537,7 +2561,7 @@ function finishView(v, pts, dt) {
   let aboveL = -1; if (ao) for (let L = LAYERS - 1; L >= 0; L--) if (layerY(L) > ao.pos.y + 0.6) { aboveL = L; break; }
   for (let L = 0; L < LAYERS; L++) {
     let want = layerY(L) > topY + 0.6 ? 0 : 1;
-    if (want === 0 && lookUp && L === aboveL) want = 0.28;
+    if (want === 0 && lookUp && L === aboveL) want = 0.45;
     let o = v.op[L] + (want - v.op[L]) * (1 - Math.exp(-9 * dt));
     if (want === 0 && o < 0.03) o = 0; if (want === 1 && o > 0.97) o = 1;
     v.op[L] = o;
