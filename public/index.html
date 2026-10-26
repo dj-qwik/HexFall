@@ -2067,7 +2067,9 @@ function botInput(p) {
   if (state === 'play' && b.gunT <= 0 && p.fireCd <= 0) {
     b.gunT = b.gunRate * (0.6 + Math.random() * 0.8);
     let tgt = null, bd = b.range;
-    players.forEach(q => { if (q === p || !q.alive || !isHuman(q) || Math.abs(q.pos.y - p.pos.y) > 6) return; const d = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z); if (d < bd && d > 1.2) { bd = d; tgt = q; } });
+    // they go after people; once every person is out, they turn on each other for the spectators
+    const humansLeft = players.some(q => q.alive && isHuman(q));
+    players.forEach(q => { if (q === p || !q.alive || (humansLeft && !isHuman(q)) || Math.abs(q.pos.y - p.pos.y) > 6) return; const d = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z); if (d < bd && d > 1.2) { bd = d; tgt = q; } });
     if (tgt) shootBot(p, tgt);
   }
   const L = p.layer, lay = layers[L];
