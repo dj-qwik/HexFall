@@ -1100,7 +1100,7 @@ function updateBubbles() {
   });
 }
 function resetChar(c) {
-  if (c.gun) { c.gun.visible = true; c.handGun.visible = false; } c.arms.forEach(a => { a.visible = true; }); c.feet.forEach(f => { f.visible = true; }); c.tilt.rotation.set(0, 0, 0); c.sq.scale.set(1, 1, 1); }
+  if (c.gun) { c.gun.visible = true; c.handGun.visible = false; } if (c.stars) c.stars.visible = false; c.arms.forEach(a => { a.visible = true; }); c.feet.forEach(f => { f.visible = true; }); c.tilt.rotation.set(0, 0, 0); c.sq.scale.set(1, 1, 1); }
 function addCorpse(p) {
   const x = Math.max(-PIT_R + 4, Math.min(PIT_R - 4, p.pos.x)), z = Math.max(-PIT_R + 4, Math.min(PIT_R - 4, p.pos.z));
   const c = p.ch; resetChar(c); c.root.visible = true; c.root.position.set(x, groundY(x, z) + 0.1, z); c.root.rotation.y = Math.random() * 6.28;
@@ -1387,6 +1387,7 @@ const scleraMat = new THREE.MeshPhysicalMaterial({ color: 0xfffaf2, roughness: 0
 const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc83a, metalness: 1, roughness: 0.18, emissive: 0x3a2400, emissiveIntensity: 0.4 });
 const diamondMat = new THREE.MeshPhysicalMaterial({ color: 0xeaf6ff, metalness: 0.3, roughness: 0.02, clearcoat: 1, emissive: 0x9ad8ff, emissiveIntensity: 0.25 });
 const GRILL_GEO = new THREE.BoxGeometry(0.022, 0.026, 0.014);
+const STAR_GEO = new THREE.OctahedronGeometry(0.075, 0);
 const hairMat = new THREE.MeshPhysicalMaterial({ color: 0x15100e, roughness: 0.45, clearcoat: 0.4 });
 const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const cheekMat = new THREE.MeshBasicMaterial({ color: 0xd86a6a, transparent: true, opacity: 0.35, depthWrite: false });
@@ -1456,8 +1457,12 @@ function makeChar(def) {
   const hs = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.055), steel); hs.position.set(0, -0.36, 0); handGun.add(hs);
   const hg = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, 0.13), polymer); hg.position.set(0, -0.29, -0.07); hg.rotation.x = 0.25; handGun.add(hg);
   handGun.visible = false; arms[0].add(handGun);
+  const stars = new THREE.Group(); stars.position.y = LIFT + TORSO_SY + 0.16;
+  const starMat = new THREE.MeshBasicMaterial({ color: 0xffe14a });
+  for (let k = 0; k < 4; k++) { const st = new THREE.Mesh(STAR_GEO, starMat); const a = k / 4 * Math.PI * 2; st.position.set(Math.cos(a) * 0.36, Math.sin(a * 2) * 0.05, Math.sin(a) * 0.36); stars.add(st); }
+  stars.visible = false; sq.add(stars);
   root.visible = false; scene.add(root);
-  return { root, tilt, sq, arms, feet, gun, handGun };
+  return { root, tilt, sq, arms, feet, gun, handGun, stars };
 }
 const CHARS = PLAYER_DEFS.map(makeChar);
 
@@ -1724,6 +1729,11 @@ function syncGrabs() {
 
 function stepPlayer(p, inp, dt) {
   if (!p.alive) return;
+  if (p.stunT > 0) {
+    p.stunT -= dt;
+    if (p.pos.y < p.stunFloor - 0.8) p.stunT = 0;            // fell through: back in control, mid-air
+    if (p.stunT > 0) inp = { mx: 0, mz: 0, jump: false, dive: false, grab: false, fire: false };
+  }
   const jumpEdge = inp.jump && !p.prevJump, diveEdge = inp.dive && !p.prevDive;
   p.prevJump = inp.jump; p.prevDive = inp.dive;
   p.grabCd = Math.max(0, p.grabCd - dt);
@@ -1792,6 +1802,10 @@ function stepPlayer(p, inp, dt) {
           const ci = layers[L].map.get(key(cq, cr));
           const ti = ci !== undefined && layers[L].state[ci] < 2 ? ci : sup[0];
           touchTile(L, ti);
+          if (p.stunT > 0) {
+            const lay = layers[L], fast = delayOf(L) - 0.2;
+            for (const i of sup) { touchTile(L, i); if (lay.state[i] === 1) lay.t[i] = Math.max(lay.t[i], fast); if (p.isMe && NET.room && !NET.touchLog.includes(L * 1000 + i)) NET.touchLog.push(L * 1000 + i); }
+          }
           if (p.isMe && NET.room) { const id = L * 1000 + ti; if (!NET.touchLog.includes(id)) { NET.touchLog.push(id); if (NET.touchLog.length > 12) NET.touchLog.shift(); } }
         }
         break;
@@ -1938,7 +1952,10 @@ function takeHit(q, dx, dz, from) {
   if (!q.alive || state !== 'play') return;
   q.hp = Math.max(0, (q.hp == null ? MAX_HP : q.hp) - 1); q.hitT = 0.25;
   const l = Math.hypot(dx, dz) || 1;
-  q.vel.x += dx / l * KNOCK; q.vel.z += dz / l * KNOCK; q.vel.y = Math.max(q.vel.y, 4.2); q.grounded = false; q.sqv += 4;
+  // stunned: frozen until they've dropped through the floor they were on (or 2.5 s at most)
+  if (!(q.stunT > 0)) q.stunFloor = q.grounded ? q.pos.y : layerY(q.layer);
+  q.stunT = 2.5; releaseGrab(q); q.diving = false;
+  q.vel.x += dx / l * KNOCK * 0.45; q.vel.z += dz / l * KNOCK * 0.45; q.vel.y = Math.max(q.vel.y, 2.6); q.grounded = false; q.sqv += 4;
   spurt(q.pos.x, q.pos.y + 0.9, q.pos.z, 9, 0.5, dx / l * 2, dz / l * 2);
   SFX.hit();
   if (q.hp <= 0) shotDead(q, dx / l, dz / l); else sayHurt(q);
@@ -2247,6 +2264,9 @@ function animChar(p, dt, t) {
   else { axL = Math.sin(p.phase) * 0.9 * run; axR = -axL; azL = -0.18 - Math.sin(t * 2 + p.i) * 0.04; azR = -azL; }
   if (p.fireT > 0) { axL = -1.55; azL = 0.05; }
   if (c.gun) { c.gun.visible = !(p.fireT > 0); c.handGun.visible = p.fireT > 0; }
+  const stunned = p.stunT > 0 || p.stunVis;
+  if (c.stars) { c.stars.visible = stunned; if (stunned) { c.stars.rotation.y += dt * 7; c.stars.children.forEach((st, k) => { st.rotation.y += dt * 9; st.rotation.x += dt * 5; }); } }
+  if (stunned) { axL = -0.2 + Math.sin(t * 9) * 0.25; axR = 0.2 - Math.sin(t * 9 + 1) * 0.25; azL = -0.5; azR = 0.5; }
   const k = 1 - Math.exp(-18 * dt);
   al.rotation.x += (axL - al.rotation.x) * k; ar.rotation.x += (axR - ar.rotation.x) * k;
   al.rotation.z += (azL - al.rotation.z) * k; ar.rotation.z += (azR - ar.rotation.z) * k;
@@ -2948,7 +2968,7 @@ function renderOnline() {
 }
 
 function packBody(p) {
-  const f = (p.alive ? 1 : 0) | (p.grounded ? 2 : 0) | (p.diving ? 4 : 0);
+  const f = (p.alive ? 1 : 0) | (p.grounded ? 2 : 0) | (p.diving ? 4 : 0) | (p.stunT > 0 ? 8 : 0);
   return [p.i, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.vel.x), r2(p.vel.y), r2(p.vel.z), f, p.layer, p.grab ? p.grab.i : -1, p.hp == null ? MAX_HP : p.hp];
 }
 function applyBody(p, b) {
@@ -2958,7 +2978,7 @@ function applyBody(p, b) {
   else { p.net.x = tx; p.net.y = ty; p.net.z = tz; }
   p.targetYaw = num(b[4]); p.vel.set(num(b[5]), num(b[6]), num(b[7]));
   const f = num(b[8]) | 0;
-  p.grounded = !!(f & 2); p.diving = !!(f & 4);
+  p.grounded = !!(f & 2); p.diving = !!(f & 4); p.stunVis = !!(f & 8);
   const L = num(b[9]) | 0; if (L >= 0 && L < LAYERS) p.layer = L;
   const gs = num(b[10], -1) | 0;
   p.grab = gs >= 0 && gs !== p.i && players[gs] ? players[gs] : null;
