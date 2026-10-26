@@ -1012,7 +1012,7 @@ function updateBubbles() {
     if (age > BUBBLE_TIME || state === 'lobby') { cp.bubble.remove(); cp.bubble = null; return; }
     // follow the body, in the dying player's own view when the screen is split
     const v = splitOn && cp.p.view && views.includes(cp.p.view) ? cp.p.view : views[0];
-    const c = cp.p.ch.root.position; v3.set(c.x, c.y + 2.2, c.z);
+    const c = cp.p.ch.root.position; v3.set(c.x, c.y + 2.5, c.z);
     if (!cp.p.ch.root.visible) v3.copy(cp.focus).y += 2;
     v3.project(v.cam);
     const r = v.rect, x = r.x + (v3.x + 1) / 2 * r.w, y = r.y + (1 - v3.y) / 2 * r.h;
@@ -1052,7 +1052,7 @@ function updateCorpses(dt, t) {
       const b = cp.biter, mp = mouthPos(b);
       if (cp.phase !== 'burst') {
         // hanging from the biter's jaws, swinging limp
-        c.root.position.set(mp.x, mp.y - 0.55, mp.z); c.root.rotation.y = b.yaw + Math.PI / 2;
+        c.root.position.set(mp.x, mp.y - 0.7, mp.z); c.root.rotation.y = b.yaw + Math.PI / 2;
         c.tilt.rotation.set(Math.sin(t * 19) * 0.6, 0, 1.3 + Math.sin(t * 23) * 0.35);
         c.sq.scale.set(1, 1 + Math.sin(t * 30) * 0.08, 1);
         cp.focus.copy(c.root.position);
@@ -1257,7 +1257,7 @@ prof.forEach(v => { v.x = Math.max(0.001, v.x); v.y = Math.max(0, v.y); });
 prof[0].set(0.001, 0); prof[prof.length - 1].set(0.001, 1.0);
 const radAt = y => { for (let i = 1; i < prof.length; i++) if (prof[i].y >= y) { const a = prof[i - 1], b = prof[i]; return a.x + (b.x - a.x) * ((y - a.y) / Math.max(1e-6, b.y - a.y)); } return 0.001; };
 const BODY_GEO = new THREE.LatheGeometry(prof, 48);
-const PANTS_Y = 0.17, LIFT = 0.2, PIVOT = 0.62, CHAR_SCALE = 1.18;
+const PANTS_Y = 0.17, LIFT = 0.36, TORSO_SY = 1.08, PIVOT = 0.8, CHAR_SCALE = 1.18;
 const pantsPts = [];
 for (let i = 0; i < prof.length; i++) {
   const v = prof[i];
@@ -1271,8 +1271,20 @@ function bandGeo(y0, y1, push) {
   for (let k = 0; k <= 16; k++) { const y = y0 + (y1 - y0) * k / 16; pts.push(new THREE.Vector2(radAt(y) * push + 0.003, y)); }
   return new THREE.LatheGeometry(pts, 48);
 }
-const BOXERS_GEO = bandGeo(PANTS_Y - 0.01, 0.29, 1.025);
-const SHIRT_GEO = bandGeo(0.27, 0.6, 1.035);
+const BOXERS_GEO = bandGeo(PANTS_Y - 0.01, 0.32, 1.025);
+const SHIRT_GEO = (() => {
+  const A = 96, V = 18, y0 = 0.3, pos = [], idx = [];
+  const top = phi => { const sn = Math.abs(Math.sin(phi)), cs = Math.max(0, Math.cos(phi)), cb = Math.max(0, -Math.cos(phi));
+    return 0.62 - 0.17 * Math.pow(sn, 3) - 0.1 * Math.pow(cs, 8) - 0.04 * Math.pow(cb, 8); };   // arm holes, scoop front, lower back
+  for (let i = 0; i <= A; i++) {
+    const phi = i / A * Math.PI * 2, rib = 1 + 0.012 * Math.sin(phi * 64), t = top(phi);
+    for (let j = 0; j <= V; j++) { const y = y0 + (t - y0) * j / V, r = radAt(y) * 1.04 * rib + 0.004; pos.push(Math.sin(phi) * r, y, Math.cos(phi) * r); }
+  }
+  for (let i = 0; i < A; i++) for (let j = 0; j < V; j++) { const a = i * (V + 1) + j, b = a + V + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  return g;
+})();
+const HEM_GEO = new THREE.TorusGeometry(1, 0.018, 6, 64);
 const BANDANA_GEO = bandGeo(0.76, 0.845, 1.06);
 const SAG_GEO = new THREE.TorusGeometry(1, 0.06, 10, 40);
 // cornrows: braids running front to back over the top of the head
@@ -1289,9 +1301,13 @@ const CORNROW_GEOS = [-0.24, -0.16, -0.08, 0, 0.08, 0.16, 0.24].map(x => {
 const KNOT_GEO = new THREE.SphereGeometry(0.06, 14, 10), TAIL_GEO = new THREE.ConeGeometry(0.05, 0.22, 10);
 const EYE_GEO = new THREE.SphereGeometry(0.068, 16, 12), SHINE_GEO = new THREE.SphereGeometry(0.022, 8, 6);
 const LIMB_GEO = new THREE.SphereGeometry(0.5, 16, 12);
-const LEG_GEO = new THREE.CylinderGeometry(0.075, 0.085, 0.26, 12);
+const LEG_GEO = new THREE.CylinderGeometry(0.1, 0.118, LIFT + 0.05, 16); // baggy jeans legs
+const CUFF_GEO = new THREE.TorusGeometry(0.115, 0.03, 8, 24);
 const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1d1233, roughness: 0.2 });
 const scleraMat = new THREE.MeshPhysicalMaterial({ color: 0xfffaf2, roughness: 0.15, clearcoat: 1 });
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc83a, metalness: 1, roughness: 0.18, emissive: 0x3a2400, emissiveIntensity: 0.4 });
+const diamondMat = new THREE.MeshPhysicalMaterial({ color: 0xeaf6ff, metalness: 0.3, roughness: 0.02, clearcoat: 1, emissive: 0x9ad8ff, emissiveIntensity: 0.25 });
+const GRILL_GEO = new THREE.BoxGeometry(0.022, 0.026, 0.014);
 const hairMat = new THREE.MeshPhysicalMaterial({ color: 0x15100e, roughness: 0.45, clearcoat: 0.4 });
 const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 const cheekMat = new THREE.MeshBasicMaterial({ color: 0xd86a6a, transparent: true, opacity: 0.35, depthWrite: false });
@@ -1301,7 +1317,7 @@ function makeChar(def) {
   const root = new THREE.Group(), tilt = new THREE.Group(), sq = new THREE.Group();
   const scaler = new THREE.Group(); scaler.scale.setScalar(CHAR_SCALE);
   tilt.position.y = PIVOT; sq.position.y = -PIVOT; root.add(scaler); scaler.add(tilt); tilt.add(sq);
-  const torso = new THREE.Group(); torso.position.y = LIFT; sq.add(torso);
+  const torso = new THREE.Group(); torso.position.y = LIFT; torso.scale.y = TORSO_SY; sq.add(torso);
   const bodyMat = new THREE.MeshPhysicalMaterial({ color: def.body, roughness: 0.34, clearcoat: 0.9, clearcoatRoughness: 0.18, sheen: 0, side: THREE.DoubleSide });
   const pantsMat = new THREE.MeshStandardMaterial({ color: def.pants, roughness: 0.62, side: THREE.DoubleSide });
   const footMat = new THREE.MeshPhysicalMaterial({ color: 0xf4f4f4, roughness: 0.35, clearcoat: 0.6 });  // fresh white kicks
@@ -1310,7 +1326,18 @@ function makeChar(def) {
   // sagging jeans: waistband sits low, boxers showing above it, tee over the top
   const band = new THREE.Mesh(SAG_GEO, pantsMat); band.rotation.x = Math.PI / 2; band.position.y = PANTS_Y; band.scale.set(radAt(PANTS_Y) * 1.04, radAt(PANTS_Y) * 1.04, 1); torso.add(band);
   const boxers = new THREE.Mesh(BOXERS_GEO, new THREE.MeshStandardMaterial({ color: def.boxers, roughness: 0.7, side: THREE.DoubleSide })); torso.add(boxers);
-  const shirt = new THREE.Mesh(SHIRT_GEO, new THREE.MeshStandardMaterial({ color: def.shirt, roughness: 0.75, side: THREE.DoubleSide })); shirt.castShadow = true; torso.add(shirt);
+  const tankMat = new THREE.MeshStandardMaterial({ color: def.shirt, roughness: 0.8, side: THREE.DoubleSide });
+  const shirt = new THREE.Mesh(SHIRT_GEO, tankMat); shirt.castShadow = true; torso.add(shirt);
+  const hem = new THREE.Mesh(HEM_GEO, tankMat); hem.rotation.x = Math.PI / 2; hem.position.y = 0.3; hem.scale.set(radAt(0.3) * 1.045, radAt(0.3) * 1.045, 1); torso.add(hem);
+  // boxers: stripes so they read as underwear
+  const stripeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(def.css), roughness: 0.7 });
+  [0.215, 0.27].forEach(y => { const st = new THREE.Mesh(HEM_GEO, stripeMat); st.rotation.x = Math.PI / 2; st.position.y = y; st.scale.set(radAt(y) * 1.032, radAt(y) * 1.032, 0.8); torso.add(st); });
+  // a pistol tucked in the front of the waistband (just for looks)
+  const gun = new THREE.Group(), polymer = new THREE.MeshPhysicalMaterial({ color: 0x1c1c22, roughness: 0.4, clearcoat: 0.5 }), steel = new THREE.MeshStandardMaterial({ color: 0x6a6a74, metalness: 0.85, roughness: 0.25 });
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.13, 0.035), polymer); grip.position.set(0, 0.05, 0); grip.rotation.z = -0.22; gun.add(grip);
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.035, 0.05), steel); slide.position.set(0.018, -0.005, 0); gun.add(slide);
+  const guard = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 6, 12, Math.PI), polymer); guard.position.set(-0.01, -0.012, 0); guard.rotation.z = Math.PI; gun.add(guard);
+  gun.position.set(0.17, PANTS_Y + 0.03, radAt(PANTS_Y) * 1.06 + 0.012); gun.rotation.y = 0.35; gun.traverse(o => { o.castShadow = true; }); torso.add(gun);
   // bandana tied round the forehead, knot and tails at the back
   const bMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(def.css), roughness: 0.5, clearcoat: 0.3, side: THREE.DoubleSide });
   torso.add(new THREE.Mesh(BANDANA_GEO, bMat));
@@ -1327,16 +1354,22 @@ function makeChar(def) {
     const ch = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), cheekMat);
     ch.position.set(s * cx * 1.012, cy, cz * 1.012); ch.rotation.y = Math.atan2(s * cx, cz); ch.scale.set(1.25, 0.8, 1); torso.add(ch);
   }
-  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.048, 0.014, 6, 14, Math.PI), mouthMat);
-  mouth.rotation.z = Math.PI; mouth.position.set(0, 0.57, radAt(0.57) - 0.002); torso.add(mouth);
+  const mz = radAt(0.555);
+  const mouth = new THREE.Mesh(new THREE.CircleGeometry(0.085, 24, Math.PI, Math.PI), mouthMat);
+  mouth.position.set(0, 0.575, mz + 0.004); mouth.scale.set(1, 0.85, 1); torso.add(mouth);
+  for (let k = 0; k < 6; k++) {
+    const tx = -0.0625 + k * 0.025, t = new THREE.Mesh(GRILL_GEO, k === 2 ? diamondMat : goldMat);
+    t.position.set(tx, 0.564, Math.sqrt(Math.max(0, mz * mz - tx * tx)) + 0.012); t.rotation.y = Math.atan2(tx, mz); torso.add(t);
+  }
   const arms = [], feet = [];
   for (const s of [-1, 1]) {
-    const piv = new THREE.Group(); piv.position.set(s * 0.47, LIFT + 0.46, 0);
+    const piv = new THREE.Group(); piv.position.set(s * 0.47, LIFT + 0.46 * TORSO_SY, 0);
     const a = new THREE.Mesh(LIMB_GEO, bodyMat); a.scale.set(0.11, 0.17, 0.11); a.position.set(s * 0.06, -0.09, 0); a.castShadow = true;
     piv.add(a); sq.add(piv); arms.push(piv);
     const hip = new THREE.Group(); hip.position.set(s * 0.17, LIFT + 0.08, 0);
     const leg = new THREE.Mesh(LEG_GEO, pantsMat); leg.position.y = -(LIFT + 0.08) / 2 + 0.02; leg.castShadow = true; hip.add(leg);
     const f = new THREE.Mesh(LIMB_GEO, footMat); f.scale.set(0.18, 0.11, 0.25); f.position.set(0, -(LIFT + 0.08) + 0.05, 0.05); f.castShadow = true;
+    [0, 1].forEach(k => { const cf = new THREE.Mesh(CUFF_GEO, pantsMat); cf.rotation.x = Math.PI / 2; cf.position.y = -(LIFT + 0.08) + 0.13 + k * 0.06; cf.scale.setScalar(1 - k * 0.06); hip.add(cf); }); // jeans bunched at the ankle
     hip.add(f); sq.add(hip); feet.push(hip);
   }
   root.visible = false; scene.add(root);
@@ -2163,7 +2196,7 @@ function updateTags() {
     row.forEach((el, i) => {
       const p = players[i];
       if (!v || !p || !p.alive || state === 'lobby') { el.hidden = true; return; }
-      v3.copy(p.ch.root.position); v3.y += 1.85; v3.project(v.cam);
+      v3.copy(p.ch.root.position); v3.y += 2.15; v3.project(v.cam);
       const r = v.rect, x = r.x + (v3.x + 1) / 2 * r.w, y = r.y + (1 - v3.y) / 2 * r.h;
       if (v3.z > 1 || x < r.x + 4 || x > r.x + r.w - 4 || y < r.y + 24 || y > r.y + r.h) { el.hidden = true; return; }
       el.hidden = false;
