@@ -236,9 +236,6 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
 #tags{position:fixed;inset:0;pointer-events:none;overflow:hidden;}
 .tag{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;will-change:transform;}
 .tag span{font-family:var(--display);font-size:15px;color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;line-height:1;}
-.tag .hp{display:block;width:44px;height:7px;margin-top:3px;border:2px solid var(--ink);border-radius:5px;background:#3a1a24;overflow:hidden;}
-.tag .hp u{display:block;height:100%;background:#5fe0a5;transition:width .15s;}
-.tag .hp.low u{background:#ff3b3b;}
 .tag i{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid var(--c);margin-top:3px;filter:drop-shadow(0 2px 0 var(--ink));}
 
 /* ---------- modal panels ---------- */
@@ -353,7 +350,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
           <div class="actions"><button class="btn small" id="leaveBtn" type="button">Leave room</button></div>
         </div>
       </div>
-      <p class="tip"><b>PRO TIP</b>Hop, don't run. Five shots kills, but the pit kills instantly. Shoot them off the edge.</p>
+      <p class="tip"><b>PRO TIP</b>Hop, don't run. A shot stuns people and drops them a floor. Shoot them all the way to the dogs.</p>
       <details class="howto">
         <summary>Controls</summary>
         <div class="controls">
@@ -413,7 +410,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
       <button class="tb fire" id="tFire" type="button" aria-label="Shoot">Shoot</button>
     </div>
     <button class="tpause" id="tPause" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
-    <p class="thint" id="tHint">Left thumb moves · drag right side to aim · 5 hits and you're dead</p>
+    <p class="thint" id="tHint">Left thumb moves · drag right side to aim · a hit drops you a floor</p>
   </div>
 </div>
 
@@ -1022,19 +1019,6 @@ const HURT_WORDS = [
   'Okay okay okay OKAY!', "I'm fine! I'm FINE!", "That's my only body!", 'Hold up, hold up!',
   "My insurance don't cover this!", 'Son of a—!', 'Respectfully... OW.', 'That was my lucky spot!',
   'Bullets?! In THIS economy?!', 'Ayo, that hurt!', 'Tis but a flesh wound!', 'Not cool, man. NOT COOL.',
-];
-// famous last words after the tenth bullet
-const SHOT_DEAD_WORDS = [
-  'Wow. Real mature.', "I'll haunt your WiFi.", "Respawn? ...There's no respawn?!", 'Five shots? You needed FIVE?',
-  'GG. You still suck.', 'I was carrying this team!', 'Lag! That was LAG!', 'Bury me with my grillz.',
-  "I'm telling everybody you camped.", "Fine. I didn't wanna play anyway.", "Bet you can't do that again.", 'Cool. Cool cool cool.',
-  'Death by a thousand... five cuts.', 'Tell the dogs I said hi.', 'My mixtape was gonna be fire!', 'This game is rigged!',
-  'You aim like my grandma. And she got me.', 'Uninstalling.', "Worth it. Wait, no it wasn't.", 'I died how I lived: getting shot.',
-  "At least the dogs won't get me.", 'Screenshot my K/D before you laugh.', 'Tell my boxers they were loved.', 'I want a rematch. And a lawyer.',
-  "Well, that's just fuckin' great.", "You're lucky I was lagging.", "I'm not mad. I'm just disappointed.", 'Shoulda stayed home.',
-  'Hope those bullets were worth it.', 'See you in hell. Save me a seat.', 'My sagging pants slowed me down!', 'Ruined my whole outfit.',
-  'Tell my homies I went out swaggin.', 'Rest in pieces. Literally.', 'I had plans tonight!', 'Rage quitting from the afterlife.',
-  "Next time I'm bringin' a bigger gun.", 'You got lucky, punk.', 'Who even aims for the face?!', "I'm only dead on the outside.",
 ];
 // each list is drawn from a shuffled deck, so nothing repeats until every line has come up
 const decks = new Map();
@@ -1847,9 +1831,9 @@ function eliminate(p) {
 
 /* ----- guns ----- */
 // Everyone aims with their camera: a crosshair sits in the middle of their view and the camera
-// looks over the shoulder. Shots are fast tracers; a hit shoves the target and takes 1 of 5 health.
-// The fifth hit kills. Falling into the pit still kills straight away.
-const MAX_HP = 5, FIRE_CD = 0.3, BULLET_SPEED = 55, BULLET_LIFE = 0.95, HIT_R = 0.62, KNOCK = 6.5;
+// looks over the shoulder. Shots are fast tracers; a hit stuns the target so they drop through
+// their floor. There's no health: the only way to die is the pit.
+const FIRE_CD = 0.3, BULLET_SPEED = 55, BULLET_LIFE = 0.95, HIT_R = 0.62, KNOCK = 6.5;
 // a bright white-hot core inside a glowing sleeve in the shooter's color, a long streak behind it,
 // a big muzzle flash, and a burst wherever it lands so you can see exactly where you're hitting
 const TRACERS = [], IMPACTS = [];
@@ -1950,7 +1934,7 @@ function shootBot(p, q) {
 const simulatesHere = q => !q.remote;
 function takeHit(q, dx, dz, from) {
   if (!q.alive || state !== 'play') return;
-  q.hp = Math.max(0, (q.hp == null ? MAX_HP : q.hp) - 1); q.hitT = 0.25;
+  q.hitT = 0.25;
   const l = Math.hypot(dx, dz) || 1;
   // stunned: frozen until they've dropped through the floor they were on (or 2.5 s at most)
   if (!(q.stunT > 0)) q.stunFloor = q.grounded ? q.pos.y : layerY(q.layer);
@@ -1958,16 +1942,7 @@ function takeHit(q, dx, dz, from) {
   q.vel.x += dx / l * KNOCK * 0.45; q.vel.z += dz / l * KNOCK * 0.45; q.vel.y = Math.max(q.vel.y, 2.6); q.grounded = false; q.sqv += 4;
   spurt(q.pos.x, q.pos.y + 0.9, q.pos.z, 9, 0.5, dx / l * 2, dz / l * 2);
   SFX.hit();
-  if (q.hp <= 0) shotDead(q, dx / l, dz / l); else sayHurt(q);
-}
-function shotDead(q, dx, dz) {
-  const x = q.pos.x, y = q.pos.y + 0.8, z = q.pos.z, def = q.def;
-  spurt(x, y, z, 70, 1.3, dx * 3, dz * 3);
-  spawnChunks(x, y, z, [[def.body, 1.1], [def.body, 0.9], [def.body, 1.0], [def.pants, 1.0], [def.pants, 0.8], [new THREE.Color(def.css).getHex(), 0.7], [0x15100e, 0.45]], 1);
-  SFX.maul();
-  q.deathPos = new THREE.Vector3(x, y, z); q.lingerUntil = clock + 2.4;
-  eliminate(q);
-  say(q, drawLine(SHOT_DEAD_WORDS), 3.2, false);
+  sayHurt(q);
 }
 function updateTracers(dt) {
   for (const T of TRACERS) {
@@ -2561,7 +2536,7 @@ const viewAt = (x, y) => views.find(v => x >= v.rect.x && x < v.rect.x + v.rect.
 /* ================= HUD / DOM ================= */
 const tagPool = [0, 1, 2, 3].map(() => PLAYER_DEFS.map(def => {
   const el = document.createElement('div'); el.className = 'tag'; el.style.setProperty('--c', def.css);
-  el.innerHTML = '<span></span><b class="hp"><u></u></b><i></i>'; el.hidden = true; $('#tags').appendChild(el); return el;
+  el.innerHTML = '<span></span><i></i>'; el.hidden = true; $('#tags').appendChild(el); return el;
 }));
 const allTags = fn => tagPool.forEach(row => row.forEach(fn));
 function updateTags() {
@@ -2576,8 +2551,6 @@ function updateTags() {
       if (v3.z > 1 || x < r.x + 4 || x > r.x + r.w - 4 || y < r.y + 24 || y > r.y + r.h) { el.hidden = true; return; }
       el.hidden = false;
       el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
-      const hp = p.hp == null ? MAX_HP : p.hp, bar = el.querySelector('.hp');
-      if (bar && bar.dataset.hp !== String(hp)) { bar.dataset.hp = String(hp); bar.hidden = hp >= MAX_HP; bar.querySelector('u').style.width = (hp / MAX_HP * 100) + '%'; bar.classList.toggle('low', hp <= 2); }
     });
   });
 }
@@ -2713,7 +2686,7 @@ function toLobby() {
 function placeAtSpawn(p) {
   const [x, z] = spawnPoint(p.i); p.pos.set(x, 0, z);
   p.yaw = p.targetYaw = Math.atan2(-x, -z);
-  p.hp = MAX_HP; resetChar(p.ch); p.ch.root.visible = true; p.ch.root.scale.setScalar(1); p.ch.root.position.copy(p.pos); p.lingerUntil = 0; p.deathPos = null;
+  p.stunT = 0; resetChar(p.ch); p.ch.root.visible = true; p.ch.root.scale.setScalar(1); p.ch.root.position.copy(p.pos); p.lingerUntil = 0; p.deathPos = null;
 }
 function beginRoundUI() {
   nextMatchTrack(); clearGore();
@@ -2969,7 +2942,7 @@ function renderOnline() {
 
 function packBody(p) {
   const f = (p.alive ? 1 : 0) | (p.grounded ? 2 : 0) | (p.diving ? 4 : 0) | (p.stunT > 0 ? 8 : 0);
-  return [p.i, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.vel.x), r2(p.vel.y), r2(p.vel.z), f, p.layer, p.grab ? p.grab.i : -1, p.hp == null ? MAX_HP : p.hp];
+  return [p.i, r2(p.pos.x), r2(p.pos.y), r2(p.pos.z), r2(p.yaw), r2(p.vel.x), r2(p.vel.y), r2(p.vel.z), f, p.layer, p.grab ? p.grab.i : -1];
 }
 function applyBody(p, b) {
   if (!p || !Array.isArray(b) || b.length < 11) return;
@@ -2982,7 +2955,6 @@ function applyBody(p, b) {
   const L = num(b[9]) | 0; if (L >= 0 && L < LAYERS) p.layer = L;
   const gs = num(b[10], -1) | 0;
   p.grab = gs >= 0 && gs !== p.i && players[gs] ? players[gs] : null;
-  if (typeof b[11] === 'number') p.hp = Math.max(0, Math.min(MAX_HP, b[11] | 0));
   if (!(f & 1) && p.alive && state === 'play') { p.pos.set(tx, ty, tz); eliminate(p); }
 }
 function smoothRemote(dt) {
