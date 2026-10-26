@@ -1219,6 +1219,9 @@ function updateDogs(dt, t) {
     dogs.filter(d => !d.hunt && !busy(d)).sort((a, b) => Math.hypot(a.x - tg.x, a.z - tg.z) - Math.hypot(b.x - tg.x, b.z - tg.z)).slice(0, 3).forEach(d => { d.hunt = tg; });
   });
   const active = corpses.find(cp => cp.phase === 'bite' || cp.phase === 'tear' || cp.phase === 'burst');
+  let camA = 0;   // direction from the kill to the camera watching it
+  if (active) { const cam = viewOf(active.p).cam.position; camA = Math.atan2(cam.z - active.z, cam.x - active.x); }
+  const awayFromCam = a => { let rel = ((a - camA + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; if (Math.abs(rel) < 1.25) rel = Math.sign(rel || 1) * 1.25; return camA + rel; };
   for (const d of dogs) {
     let want = 0, tx = d.tx, tz = d.tz, face = null;
     if (d.mode === 'bite') {
@@ -1226,11 +1229,18 @@ function updateDogs(dt, t) {
       if (cp) {
         // backs off slowly while shaking, dragging the body a little
         if (cp.phase === 'tear' && cp.helper) { const a = Math.atan2(d.x - cp.helper.x, d.z - cp.helper.z); face = a + Math.PI; tx = d.x + Math.sin(a); tz = d.z + Math.cos(a); want = 0.6; }
+        else if (cp === active) face = -camA;  // stands side-on to the camera so the body in its jaws isn't hidden behind its head
       } else d.mode = 'pace';
     } else if (d.mode === 'tug') {
       const cp = d.cp;
       if (!cp || cp.phase === 'done') { d.mode = 'pace'; }
-      else { const bp = mouthPos(cp.biter, new THREE.Vector3()); tx = bp.x; tz = bp.z; const dist = Math.hypot(tx - d.x, tz - d.z); want = dist > 2.9 ? 9 : 0; face = Math.atan2(tx - d.x, tz - d.z); }
+      else {
+        // come at the body from the far side, away from the camera
+        const bp = mouthPos(cp.biter, new THREE.Vector3()), side = camA + Math.PI;
+        const sx = bp.x + Math.cos(side) * 2.9, sz = bp.z + Math.sin(side) * 2.9;
+        const toSlot = Math.hypot(sx - d.x, sz - d.z);
+        tx = sx; tz = sz; want = toSlot > 0.6 ? Math.min(9, toSlot * 3) : 0; face = Math.atan2(bp.x - d.x, bp.z - d.z);
+      }
     } else if (d.mode === 'carry') {
       d.t += dt; tx = d.tx; tz = d.tz; want = 3;
       if (Math.hypot(tx - d.x, tz - d.z) < 1 || d.t > 4) { d.mode = 'chew'; d.t = 5 + Math.random() * 3; }
@@ -1240,11 +1250,14 @@ function updateDogs(dt, t) {
     } else if (d.hunt) {
       d.mode = 'hunt'; tx = d.hunt.x; tz = d.hunt.z;
       const dist = Math.hypot(tx - d.x, tz - d.z);
-      want = dist > 6 ? 16 : dist > 2.6 ? 4 : 0;   // sprint in, then slow the last few steps
+      // only the nearest dog goes all the way in; the others pull up a few steps back
+      const lead = dogs.filter(o => o.hunt === d.hunt).sort((a, b) => Math.hypot(a.x - tx, a.z - tz) - Math.hypot(b.x - tx, b.z - tz))[0] === d;
+      const stop = lead ? 2.6 : 6.5;
+      want = dist > stop + 3.4 ? 16 : dist > stop ? 4 : 0;
     } else if (active && Math.hypot(d.x - active.x, d.z - active.z) < 16) {
       // circle the kill, snarling, waiting a turn
-      d.mode = 'circle'; const a = Math.atan2(d.z - active.z, d.x - active.x) + dt * 0.35;
-      tx = active.x + Math.cos(a) * 5.5; tz = active.z + Math.sin(a) * 5.5; want = 2.6; face = Math.atan2(active.x - d.x, active.z - d.z);
+      d.mode = 'circle'; const a = awayFromCam(Math.atan2(d.z - active.z, d.x - active.x) + dt * 0.35);
+      tx = active.x + Math.cos(a) * 8.5; tz = active.z + Math.sin(a) * 8.5; want = 2.6; face = Math.atan2(active.x - d.x, active.z - d.z);
     } else {
       d.mode = 'pace'; d.t -= dt;
       if (d.t <= 0 || Math.hypot(d.tx - d.x, d.tz - d.z) < 1.5) { const a = Math.random() * Math.PI * 2, r = 3 + Math.random() * (PIT_R - 8); d.tx = Math.cos(a) * r; d.tz = Math.sin(a) * r; d.t = 4 + Math.random() * 6; }
@@ -2014,13 +2027,15 @@ function readShots(peer, s) {
 
 // crosshairs: one per view, in the middle, for whoever that view belongs to
 const CROSSES = [0, 1, 2, 3].map(() => { const el = document.createElement('div'); el.className = 'cross'; el.hidden = true; el.innerHTML = '<i></i>'; $('#crosses').appendChild(el); return el; });
+const inPitFall = p => p.pos.y < layerY(LAYERS - 1) - 1;   // dropped past the last floor: nothing left to aim at
 function aimOwner(v) {
   if (!(state === 'play' || state === 'countdown')) return null;
-  if (v.kind === 'player') return v.player.alive ? v.player : null;
-  if (v.kind !== 'main') return null;
-  if (NET.room) { const me = players.find(p => p.isMe); return me && me.alive ? me : null; }
-  const alive = players.filter(p => p.alive && isHuman(p) && !p.remote);
-  return alive.length === 1 ? alive[0] : null;
+  let o = null;
+  if (v.kind === 'player') o = v.player.alive ? v.player : null;
+  else if (v.kind !== 'main') return null;
+  else if (NET.room) { const me = players.find(p => p.isMe); o = me && me.alive ? me : null; }
+  else { const alive = players.filter(p => p.alive && isHuman(p) && !p.remote); o = alive.length === 1 ? alive[0] : null; }
+  return o && !inPitFall(o) ? o : null;
 }
 function updateCrosses() {
   CROSSES.forEach((el, i) => {
@@ -2433,7 +2448,15 @@ function updateView(v, dt) {
     finishView(v, winners, dt);
     return;
   }
-  if (pts.length === 1 && pts[0].close) d = 10;
+  // anything happening down in the pit: a wide, steady shot from the pit's inside, never squeezed against the wall
+  const inPit = pts.length > 0 && pts.every(p => p.pos.y < layerY(LAYERS - 1) - 1);
+  if (inPit && v.kind !== 'overview') {
+    d = 13;
+    const r = Math.hypot(c.x, c.z);
+    if (r > 6) v.yaw = angLerp(v.yaw, Math.atan2(-c.x, -c.z), 1 - Math.exp(-3 * dt));   // camera on the side toward the middle
+    v.pitch += (0.62 - v.pitch) * (1 - Math.exp(-3 * dt));
+    v.zoom += (1 - v.zoom) * (1 - Math.exp(-2 * dt)); v.aimZ = 1;
+  } else if (pts.length === 1 && pts[0].close) d = 10;
   v.aimZ = (v.aimZ || 1) + ((v.aimHeld ? 0.6 : 1) - (v.aimZ || 1)) * (1 - Math.exp(-10 * dt));
   d *= v.zoom * v.aimZ;
   const owner = state !== 'intro' ? aimOwner(v) : null;
