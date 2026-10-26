@@ -218,6 +218,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
   transform:translateX(-50%) rotate(45deg) skew(10deg,10deg);border-radius:0 0 6px 0;}
 .bubble span::before{content:"";position:absolute;inset:4px;border-radius:16px;border:2px dashed var(--c);opacity:.35;pointer-events:none;}
 .bubble{transition:opacity .4s;}
+.bubble.small span{font-size:clamp(14px,1.8vw,18px);padding:7px 12px 8px;border-width:3px;max-width:min(200px,50vw);}
 .bubble.fade{opacity:0;}
 @keyframes yell{0%{transform:scale(.2) rotate(-14deg);opacity:0}60%{transform:scale(1.12) rotate(var(--tilt))}100%{transform:scale(1) rotate(var(--tilt));opacity:1}}
 @keyframes shake{from{translate:-2px 0}to{translate:2px 0}}
@@ -360,7 +361,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
           <div class="ctl"><strong>Keyboard 1</strong><kbd class="k">WASD</kbd> move <kbd class="k">Space</kbd> join / jump <kbd class="k">Shift</kbd> dive <kbd class="k">E</kbd> grab <kbd class="k">Q</kbd> shoot</div>
           <div class="ctl"><strong>Keyboard 2</strong><kbd class="k">Arrows</kbd> move <kbd class="k">/</kbd> join / jump <kbd class="k">.</kbd> dive <kbd class="k">,</kbd> grab <kbd class="k">L</kbd> shoot</div>
           <div class="ctl"><strong>Anywhere</strong><kbd class="k">F</kbd> fullscreen <kbd class="k">M</kbd> music <kbd class="k">B</kbd> / <kbd class="k">Backspace</kbd> leave <kbd class="k">C</kbd> / <kbd class="k">Y</kbd> CPU fill <kbd class="k">V</kbd> / <kbd class="k">X</kbd> CPU skill</div>
-          <div class="ctl"><strong>Mouse</strong>Click to shoot, drag to aim and look, scroll to zoom</div>
+          <div class="ctl"><strong>Mouse</strong>Click the game to lock the mouse, move to aim, click to shoot, Esc to let go, scroll to zoom</div>
           <div class="ctl"><strong>Phone / tablet</strong>Controls appear on screen. Thumb on the left to move, drag the right side to look.</div>
           <div class="ctl"><strong>Online</strong>Any keyboard layout or controller moves your character.</div>
         </div>
@@ -994,6 +995,7 @@ function clearGore() {
   dogs.forEach(d => { d.carry = null; d.cp = null; if (d.mode !== 'pace') { d.mode = 'pace'; d.t = 0; } });
   corpses.forEach(cp => { if (cp.bubble) cp.bubble.remove(); });
   corpses.length = 0;
+  TALK.forEach(T => T.el.remove()); TALK.length = 0;
 }
 // last words: a speech bubble pops up from whoever just landed in the pit
 const LAST_WORDS = [
@@ -1008,10 +1010,55 @@ const LAST_WORDS = [
   'I want a refund!!', 'Does anyone have a treat?!', 'My legs! I NEED those!', 'This is fine. This is FINE!',
   'Goddammit, Kevin!', 'I just wanted a crown!', 'Somebody call animal control!', 'Son of a BITCH!',
 ];
-let wordBag = [];
-function lastWords() {
-  if (!wordBag.length) { wordBag = LAST_WORDS.slice(); for (let i = wordBag.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [wordBag[i], wordBag[j]] = [wordBag[j], wordBag[i]]; } }
-  return wordBag.pop();
+// what you yell when a bullet hits you
+const HURT_WORDS = [
+  'OW! My everything!', "That's gonna leave a mark!", 'Who shot me?! WHO?!', 'I felt that in my soul!',
+  "Bro, that's my good side!", 'Not the grillz!', 'Ahh! I just got these pants!', 'Rude!',
+  "Okay, now it's personal!", 'Was that necessary?!', 'Shit! Shit! SHIT!', "I'm leaking!",
+  "You missed! ...wait, no you didn't", 'Fuck, that stings!', 'Somebody call my mama!', "I'm too pretty for this!",
+  'Ow! Chill!', "My kidney's on the floor somewhere!", 'Aim somewhere else, damn!', 'Is that my blood?!',
+  'I got shot! In a game about TILES!', 'Watch the drip!', "Hey! I'm hoppin' here!", 'Ouch, my pride!',
+  "You're gonna pay for that!", 'Right in the boxers!', 'Bro shot me like I owed him money!', 'Damn, who taught you to aim?!',
+  'Okay okay okay OKAY!', "I'm fine! I'm FINE!", "That's my only body!", 'Hold up, hold up!',
+  "My insurance don't cover this!", 'Son of a—!', 'Respectfully... OW.', 'That was my lucky spot!',
+  'Bullets?! In THIS economy?!', 'Ayo, that hurt!', 'Tis but a flesh wound!', 'Not cool, man. NOT COOL.',
+];
+// famous last words after the tenth bullet
+const SHOT_DEAD_WORDS = [
+  'Wow. Real mature.', "I'll haunt your WiFi.", "Respawn? ...There's no respawn?!", 'Ten shots? You needed TEN?',
+  'GG. You still suck.', 'I was carrying this team!', 'Lag! That was LAG!', 'Bury me with my grillz.',
+  "I'm telling everybody you camped.", "Fine. I didn't wanna play anyway.", "Bet you can't do that again.", 'Cool. Cool cool cool.',
+  'Death by a thousand... ten cuts.', 'Tell the dogs I said hi.', 'My mixtape was gonna be fire!', 'This game is rigged!',
+  'You aim like my grandma. And she got me.', 'Uninstalling.', "Worth it. Wait, no it wasn't.", 'I died how I lived: getting shot.',
+  "At least the dogs won't get me.", 'Screenshot my K/D before you laugh.', 'Tell my boxers they were loved.', 'I want a rematch. And a lawyer.',
+  "Well, that's just fuckin' great.", "You're lucky I was lagging.", "I'm not mad. I'm just disappointed.", 'Shoulda stayed home.',
+  'Hope those bullets were worth it.', 'See you in hell. Save me a seat.', 'My sagging pants slowed me down!', 'Ruined my whole outfit.',
+  'Tell my homies I went out swaggin.', 'Rest in pieces. Literally.', 'I had plans tonight!', 'Rage quitting from the afterlife.',
+  "Next time I'm bringin' a bigger gun.", 'You got lucky, punk.', 'Who even aims for the face?!', "I'm only dead on the outside.",
+];
+// each list is drawn from a shuffled deck, so nothing repeats until every line has come up
+const decks = new Map();
+function drawLine(list) {
+  let d = decks.get(list);
+  if (!d || !d.length) { d = list.slice(); for (let i = d.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [d[i], d[j]] = [d[j], d[i]]; } decks.set(list, d); }
+  return d.pop();
+}
+const lastWords = () => drawLine(LAST_WORDS);
+// short-lived bubbles that follow a living player (hurt) or hang where they died (shot dead)
+const TALK = [];
+function makeBubble(text, color, small) {
+  const el = document.createElement('div'); el.className = 'bubble' + (small ? ' small' : ''); el.style.setProperty('--c', color);
+  el.style.setProperty('--tilt', (Math.random() * 8 - 4).toFixed(1) + 'deg');
+  const span = document.createElement('span'); span.textContent = text; el.appendChild(span);
+  $('#bubbles').appendChild(el); return el;
+}
+function say(p, text, dur, small) {
+  for (let i = TALK.length - 1; i >= 0; i--) if (TALK[i].p === p) { TALK[i].el.remove(); TALK.splice(i, 1); }
+  TALK.push({ p, el: makeBubble(text, p.def.css, small), t: clock, dur });
+}
+function sayHurt(q) {
+  if (clock - (q.talkT || -99) < 2.4 || Math.random() > 0.75) return;  // not on every single hit
+  q.talkT = clock; say(q, drawLine(HURT_WORDS), 1.9, true);
 }
 const BUBBLE_TIME = 3.6;
 function sayLastWords(cp) {
@@ -1019,8 +1066,23 @@ function sayLastWords(cp) {
   el.style.setProperty('--tilt', (Math.random() * 8 - 4).toFixed(1) + 'deg');
   const span = document.createElement('span'); span.textContent = lastWords(); el.appendChild(span);
   $('#bubbles').appendChild(el); cp.bubble = el;
+  for (let i = TALK.length - 1; i >= 0; i--) if (TALK[i].p === cp.p) { TALK[i].el.remove(); TALK.splice(i, 1); }
+}
+function placeBubble(el, p, wp, fade) {
+  const v = splitOn && p.view && views.includes(p.view) ? p.view : views[0], v3 = wp.clone();
+  v3.project(v.cam);
+  const r = v.rect, x = r.x + (v3.x + 1) / 2 * r.w, y = r.y + (1 - v3.y) / 2 * r.h;
+  el.hidden = v3.z > 1;
+  el.style.transform = `translate(${Math.max(r.x + 90, Math.min(r.x + r.w - 90, x))}px, ${Math.max(r.y + 60, y)}px) translate(-50%, -100%)`;
+  el.classList.toggle('fade', fade);
 }
 function updateBubbles() {
+  for (let i = TALK.length - 1; i >= 0; i--) {
+    const T = TALK[i], age = clock - T.t;
+    if (age > T.dur || state === 'lobby') { T.el.remove(); TALK.splice(i, 1); continue; }
+    const p = T.p, wp = p.alive || !p.deathPos ? new THREE.Vector3(p.pos.x, p.pos.y + 2.5, p.pos.z) : p.deathPos.clone().add(new THREE.Vector3(0, 1.4 + age * 0.3, 0));
+    placeBubble(T.el, p, wp, age > T.dur - 0.35);
+  }
   const v3 = new THREE.Vector3();
   corpses.forEach(cp => {
     if (!cp.bubble) return;
@@ -1792,35 +1854,54 @@ function raySphere(o, d, c, r) {
   const ox = o.x - c.x, oy = o.y - c.y, oz = o.z - c.z, b = ox * d.x + oy * d.y + oz * d.z, cc = ox * ox + oy * oy + oz * oz - r * r, h = b * b - cc;
   if (h < 0) return -1; const t = -b - Math.sqrt(h); return t >= 0 ? t : (-b + Math.sqrt(h) >= 0 ? 0 : -1);
 }
-// where the shooter's crosshair points: the first player on the camera's centre line, or chest height ahead
+// where the shooter's crosshair points: the first player, solid tile or far point on the camera's centre line
 function aimPoint(p, out) {
   const v = viewOf(p), o = v.cam.position; _d.copy(v.target).sub(o).normalize();
-  let best = 1e9;
-  players.forEach(q => { if (q === p || !q.alive) return; const t = raySphere(o, _d, chestOf(q, _c2), HIT_R + 0.25); if (t > 0 && t < best) best = t; });
-  if (best < 1e9) return out.copy(o).add(_d.clone().multiplyScalar(best));
-  const yp = p.pos.y + 0.95;
-  if (_d.y < -0.02) { const t = (yp - o.y) / _d.y; out.copy(o).add(_d.clone().multiplyScalar(t)); }
-  else out.copy(o).add(_d.clone().multiplyScalar(60));
-  // never aim at a spot right under your own feet: push it out along the view direction
-  const fx = _d.x, fz = _d.z, fl = Math.hypot(fx, fz) || 1, dx = out.x - p.pos.x, dz = out.z - p.pos.z;
-  if (Math.hypot(dx, dz) < 3) { out.x = p.pos.x + fx / fl * 6; out.z = p.pos.z + fz / fl * 6; out.y = yp; }
-  return out;
+  let best = 120;
+  players.forEach(q => { if (q === p || !q.alive) return; const t = raySphere(o, _d, chestOf(q, _c2), HIT_R + 0.1); if (t > 0 && t < best) best = t; });
+  if (_d.y < -0.001) for (let L = 0; L < LAYERS; L++) {
+    if (v.op[L] === 0) continue;
+    const t = (layerY(L) - o.y) / _d.y; if (t <= 0 || t >= best) continue;
+    const i = tileAt(L, o.x + _d.x * t, o.z + _d.z * t);
+    if (i >= 0 && layers[L].state[i] < 2) { best = t; break; }
+  }
+  return out.copy(o).addScaledVector(_d, best);
 }
-function spawnTracer(owner, o, d, live) {
+function spawnTracer(owner, o, d, live, rec) {
   const T = TRACERS[tracerI++ % TRACERS.length];
+  T.rec = rec || null;
   T.pos.copy(o); T.dir.copy(d); T.life = BULLET_LIFE; T.fl = 0.06; T.owner = owner; T.live = live;
   T.mesh.visible = true; T.mesh.position.copy(o); T.mesh.lookAt(o.x + d.x, o.y + d.y, o.z + d.z);
   T.flash.visible = true; T.flash.position.copy(o);
 }
-function shoot(p) {
+function muzzle(p, aim) {
+  const yaw = Math.atan2(aim.x - p.pos.x, aim.z - p.pos.z); p.aimYaw = yaw; p.targetYaw = yaw;
+  return _o.set(p.pos.x + Math.sin(yaw) * 0.55, p.pos.y + 1.0, p.pos.z + Math.cos(yaw) * 0.55);
+}
+function fireFrom(p, o, d) {
   p.fireCd = FIRE_CD; p.fireT = 0.55;
+  let rec = null;
+  if (NET.room && (p.isMe || (NET.role === 'host' && p.kind === 'cpu'))) {
+    rec = [++shotId, r2(o.x), r2(o.y), r2(o.z), r2(d.x), r2(d.y), r2(d.z), -1, p.i];
+    NET.shots.push(rec); if (NET.shots.length > 10) NET.shots.shift();
+  }
+  spawnTracer(p, o, d, true, rec);
+  SFX.gun(p.kind === 'cpu' && !p.isMe);
+}
+function shoot(p) {
   aimPoint(p, _aim);
-  const yaw = Math.atan2(_aim.x - p.pos.x, _aim.z - p.pos.z); p.aimYaw = yaw; p.targetYaw = yaw;
-  _o.set(p.pos.x + Math.sin(yaw) * 0.55, p.pos.y + 1.0, p.pos.z + Math.cos(yaw) * 0.55);
-  _d.copy(_aim).sub(_o).normalize();
-  spawnTracer(p, _o, _d, true);
-  SFX.gun();
-  if (NET.room && p.isMe) { NET.shots.push([++shotId, r2(_o.x), r2(_o.y), r2(_o.z), r2(_d.x), r2(_d.y), r2(_d.z), -1]); if (NET.shots.length > 8) NET.shots.shift(); }
+  const o = muzzle(p, _aim); _d.copy(_aim).sub(o).normalize();
+  fireFrom(p, o, _d);
+}
+// CPUs aim at a person's chest; better ones lead moving targets and scatter less
+function shootBot(p, q) {
+  const b = p.bot; chestOf(q, _aim);
+  const dist = Math.hypot(_aim.x - p.pos.x, _aim.y - p.pos.y - 1, _aim.z - p.pos.z);
+  if (b.lead) { const t = dist / BULLET_SPEED; _aim.x += q.vel.x * t; _aim.z += q.vel.z * t; _aim.y += Math.max(-3, q.vel.y * t * 0.5); }
+  const o = muzzle(p, _aim); _d.copy(_aim).sub(o).normalize();
+  const yaw = Math.atan2(_d.x, _d.z) + (Math.random() * 2 - 1) * b.spread, pitch = Math.asin(Math.max(-1, Math.min(1, _d.y))) + (Math.random() * 2 - 1) * b.spread * 0.6;
+  _d.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+  fireFrom(p, o, _d);
 }
 // a player this screen is in charge of: your own character, local players, and CPUs on the host
 const simulatesHere = q => !q.remote;
@@ -1831,7 +1912,7 @@ function takeHit(q, dx, dz, from) {
   q.vel.x += dx / l * KNOCK; q.vel.z += dz / l * KNOCK; q.vel.y = Math.max(q.vel.y, 4.2); q.grounded = false; q.sqv += 4;
   spurt(q.pos.x, q.pos.y + 0.9, q.pos.z, 9, 0.5, dx / l * 2, dz / l * 2);
   SFX.hit();
-  if (q.hp <= 0) shotDead(q, dx / l, dz / l);
+  if (q.hp <= 0) shotDead(q, dx / l, dz / l); else sayHurt(q);
 }
 function shotDead(q, dx, dz) {
   const x = q.pos.x, y = q.pos.y + 0.8, z = q.pos.z, def = q.def;
@@ -1840,6 +1921,7 @@ function shotDead(q, dx, dz) {
   SFX.maul();
   q.deathPos = new THREE.Vector3(x, y, z); q.lingerUntil = clock + 2.4;
   eliminate(q);
+  say(q, drawLine(SHOT_DEAD_WORDS), 3.2, false);
 }
 function updateTracers(dt) {
   for (const T of TRACERS) {
@@ -1853,7 +1935,7 @@ function updateTracers(dt) {
       if (hit) {
         T.life = 0; T.mesh.visible = false;
         if (simulatesHere(hit)) takeHit(hit, T.dir.x, T.dir.z, T.owner);
-        else if (NET.room && T.owner && T.owner.isMe) { const last = NET.shots[NET.shots.length - 1]; if (last) last[7] = hit.i; }
+        else if (T.rec) T.rec[7] = hit.i;
         if (T.owner && !T.owner.remote) { const v = viewOf(T.owner); if (v && v.cross) { v.cross.classList.remove('hit'); void v.cross.offsetWidth; v.cross.classList.add('hit'); } }
         continue;
       }
@@ -1867,8 +1949,9 @@ function updateTracers(dt) {
 function readShots(peer, s) {
   if (!s || !Array.isArray(s.sh)) return;
   const seen = NET.shotSeen[peer] || 0; let top = seen;
-  const shooter = players[NET.ro.findIndex(r => r[0] === peer)];
+  const peerPlayer = players[NET.ro.findIndex(r => r[0] === peer)];
   s.sh.forEach(sh => {
+    const shooter = players[num(sh[8], -1) | 0] || peerPlayer;
     if (!Array.isArray(sh) || sh.length < 8 || typeof sh[0] !== 'number' || sh[0] <= seen) return;
     top = Math.max(top, sh[0]);
     _o.set(num(sh[1]), num(sh[2]), num(sh[3])); _d.set(num(sh[4]), num(sh[5]), num(sh[6]));
@@ -1907,10 +1990,10 @@ function updateCrosses() {
 // around it, planning for the floor below), how patiently it hops, how fast it reacts, and how much
 // it wants to win (hunting, shoving and grabbing other players).
 const SKILLS = [
-  { name: 'Easy',     desc: 'Hops between safe tiles, but slow to react and easily cornered.',             noise: [1.0, 1.6], hop: [0.45, 0.6], think: [0.28, 0.2], reach: 5,  look: 0.3, aggr: 0.03, slip: 0.05, react: 0.3,  smart: false, plan: false, patience: 0, margin: 0.2 },
-  { name: 'Normal',   desc: 'Keeps moving, checks its landings and plans ahead a little.',                 noise: [0.7, 1.1], hop: [0.7, 0.85], think: [0.14, 0.1], reach: 7,  look: 0.5, aggr: 0.06, slip: 0,    react: 0.26, smart: true,  plan: false, patience: 0.35, margin: 0.12 },
-  { name: 'Hard',     desc: 'Saves floor, reads the whole level, drops on purpose to good spots below.',   noise: [0.12, 0.3], hop: [0.93, 0.98], think: [0.07, 0.05], reach: 11, look: 1.1, aggr: 0.16, slip: 0,    react: 0.16, smart: true,  plan: true,  patience: 0.85, margin: 0.08 },
-  { name: 'Ruthless', desc: 'Near-perfect hopping and planning, and it hunts players to shove them off.', noise: [0.02, 0.08], hop: [1, 1],       think: [0.04, 0.03], reach: 99, look: 1.5, aggr: 0.4,  slip: 0,    react: 0.1,  smart: true,  plan: true,  patience: 1, margin: 0.05 },
+  { name: 'Easy',     desc: 'Slow to react, easily cornered, and can barely shoot straight.',             noise: [1.0, 1.6], hop: [0.45, 0.6], think: [0.28, 0.2], reach: 5,  look: 0.3, aggr: 0.03, slip: 0.05, react: 0.3,  smart: false, plan: false, patience: 0, margin: 0.2, gunRate: 3.4, spread: 0.24, lead: false, range: 14 },
+  { name: 'Normal',   desc: 'Keeps moving, checks its landings and takes the odd potshot.',                 noise: [0.7, 1.1], hop: [0.7, 0.85], think: [0.14, 0.1], reach: 7,  look: 0.5, aggr: 0.06, slip: 0,    react: 0.26, smart: true,  plan: false, patience: 0.35, margin: 0.12, gunRate: 2.4, spread: 0.12, lead: false, range: 18 },
+  { name: 'Hard',     desc: 'Saves floor, plans its drops, and shoots back often.',   noise: [0.12, 0.3], hop: [0.93, 0.98], think: [0.07, 0.05], reach: 11, look: 1.1, aggr: 0.16, slip: 0,    react: 0.16, smart: true,  plan: true,  patience: 0.85, margin: 0.08, gunRate: 1.5, spread: 0.06, lead: false, range: 24 },
+  { name: 'Ruthless', desc: 'Near-perfect hopping, hunts you down, and almost never misses.', noise: [0.02, 0.08], hop: [1, 1],       think: [0.04, 0.03], reach: 99, look: 1.5, aggr: 0.4,  slip: 0,    react: 0.1,  smart: true,  plan: true,  patience: 1, margin: 0.05, gunRate: 0.95, spread: 0.012, lead: true, range: 34 },
 ];
 let cpuSkill = 1;
 try { const v = parseInt(localStorage.getItem('hexfall.cpuSkill'), 10); if (v >= 0 && v < SKILLS.length) cpuSkill = v; } catch (e) {}
@@ -1918,7 +2001,7 @@ const rng = ([lo, hi]) => lo + Math.random() * (hi - lo);
 function makeBrain() {
   const k = SKILLS[cpuSkill];
   return { t: 0, tx: 0, tz: 0, ti: -1, has: false, wantHop: false, hunt: null, drop: false,
-    noise: rng(k.noise), hop: rng(k.hop), think: k.think, reach: k.reach, look: k.look, aggr: k.aggr, slip: k.slip, react: k.react, smart: k.smart, plan: k.plan, patience: k.patience, margin: k.margin, ring2: cpuSkill >= 2, wasG: true, stay: false };
+    noise: rng(k.noise), hop: rng(k.hop), think: k.think, reach: k.reach, look: k.look, aggr: k.aggr, slip: k.slip, react: k.react, smart: k.smart, plan: k.plan, patience: k.patience, margin: k.margin, gunRate: k.gunRate, spread: k.spread, lead: k.lead, range: k.range, gunT: 1.5 + Math.random() * 2, ring2: cpuSkill >= 2, wasG: true, stay: false };
 }
 const JUMP_AIR = 2 * JUMP / -GRAV;   // seconds in the air on a hop
 const tileAt = (L, x, z) => { const [q, r] = axialRound(x, z); const i = layers[L].map.get(key(q, r)); return i === undefined ? -1 : i; };
@@ -1936,6 +2019,13 @@ function room(lay, i, ring2) {
 }
 function botInput(p) {
   const b = p.bot, inp = { mx: 0, mz: 0, jump: false, dive: false, grab: false };
+  // shooting back: every so often, fire at the nearest person in range
+  if (state === 'play' && b.gunT <= 0 && p.fireCd <= 0) {
+    b.gunT = b.gunRate * (0.6 + Math.random() * 0.8);
+    let tgt = null, bd = b.range;
+    players.forEach(q => { if (q === p || !q.alive || !isHuman(q) || Math.abs(q.pos.y - p.pos.y) > 6) return; const d = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z); if (d < bd && d > 1.2) { bd = d; tgt = q; } });
+    if (tgt) shootBot(p, tgt);
+  }
   const L = p.layer, lay = layers[L];
   const here = tileAt(L, p.pos.x, p.pos.z);
   // react when the tile underfoot is about to go
@@ -2184,7 +2274,7 @@ function camPose(v, target, yaw, pitch, dist) {
   v.cam.position.set(target.x + Math.sin(yaw) * Math.cos(pitch) * dist, target.y + Math.sin(pitch) * dist, target.z + Math.cos(yaw) * Math.cos(pitch) * dist);
   v.cam.lookAt(target);
 }
-const clampView = v => { v.pitch = Math.max(0.22, Math.min(1.42, v.pitch)); v.zoom = Math.max(0.45, Math.min(2.2, v.zoom)); };
+const clampView = v => { const a = state !== 'intro' && !!aimOwner(v); v.pitch = Math.max(a ? -0.8 : 0.22, Math.min(a ? 1.15 : 1.42, v.pitch)); v.zoom = Math.max(0.45, Math.min(2.2, v.zoom)); };
 function viewOf(p) { return splitOn && p && p.view && views.includes(p.view) ? p.view : mainView; }
 
 function layoutViews() {
@@ -2254,8 +2344,8 @@ function padLook(dt) {
     let v = mainView;
     if (splitOn) { const p = players.find(q => q.kind === 'pad' && q.pad === pi); if (!p || !p.view) return; v = p.view; }
     const rx = gp.axes[2] || 0, ry = gp.axes[3] || 0;
-    if (Math.abs(rx) > 0.18) v.yaw -= rx * 2.6 * dt;
-    if (Math.abs(ry) > 0.18) v.pitch += ry * 1.6 * dt;
+    if (Math.abs(rx) > 0.15) v.yaw -= Math.sign(rx) * Math.pow(Math.abs(rx), 1.6) * 3.2 * dt;
+    if (Math.abs(ry) > 0.15) v.pitch += Math.sign(ry) * Math.pow(Math.abs(ry), 1.6) * 2.2 * dt;
     const lt = gp.buttons[6] ? gp.buttons[6].value : 0, rt = gp.buttons[7] ? gp.buttons[7].value : 0;
     v.aimHeld = lt > 0.15;  // LT: hold to aim (zooms in); RT fires
     clampView(v);
@@ -2281,11 +2371,10 @@ function updateView(v, dt) {
   if (pts.length === 1 && pts[0].close) d = 10;
   v.aimZ = (v.aimZ || 1) + ((v.aimHeld ? 0.6 : 1) - (v.aimZ || 1)) * (1 - Math.exp(-10 * dt));
   d *= v.zoom * v.aimZ;
-  // over the shoulder: look a little right of and ahead of whoever is aiming
-  if (aimOwner(v)) {
-    const sy = Math.sin(v.yaw), cy = Math.cos(v.yaw);
-    c.x += cy * 0.9 - sy * 2.2; c.z += -sy * 0.9 - cy * 2.2; c.y += 0.5;
-  }
+  const owner = state !== 'intro' ? aimOwner(v) : null;
+  if (owner) { aimCam(v, owner, dt); finishView(v, [owner], dt); return; }
+  v.sunAt = null;
+  if (v.pitch < 0.22) v.pitch += (0.5 - v.pitch) * (1 - Math.exp(-4 * dt));   // coming out of aiming
   c.y = Math.max(c.y, SLIME_Y + 3) + 0.4;
   if (state === 'intro' && v.kind === 'main') {
     // sweep up the tower from the bottom floor, circling once and a half, and land on the normal view
@@ -2299,6 +2388,32 @@ function updateView(v, dt) {
     v.target.lerp(c, 1 - Math.exp(-3.2 * dt)); v.dist += (d - v.dist) * (1 - Math.exp(-4 * dt));
     camPose(v, v.target, v.yaw, v.pitch, v.dist);
   }
+  finishView(v, pts, dt);
+}
+// Third-person shooter view: the camera sits behind and over the right shoulder and looks exactly
+// where the yaw and pitch say, so the crosshair in the middle of the screen is where you aim.
+// pitch > 0 looks down, pitch < 0 looks up.
+const _head = new THREE.Vector3(), _look = new THREE.Vector3(), _cp = new THREE.Vector3();
+function aimCam(v, owner, dt) {
+  if (!v.aimInit) { v.aimInit = true; v.pitch = 0.38; v.head = new THREE.Vector3().copy(owner.pos); }
+  v.aimZ = (v.aimZ || 1) + ((v.aimHeld ? 0.55 : 1) - (v.aimZ || 1)) * (1 - Math.exp(-10 * dt));
+  v.head.lerp(owner.pos, 1 - Math.exp(-14 * dt));
+  const sy = Math.sin(v.yaw), cy = Math.cos(v.yaw), cp = Math.cos(v.pitch), sp = Math.sin(v.pitch);
+  _look.set(-sy * cp, -sp, -cy * cp);                         // where the crosshair points
+  const dist = 6.5 * v.zoom * v.aimZ;
+  _head.set(v.head.x, v.head.y + 1.75, v.head.z);
+  _cp.copy(_head).addScaledVector(_look, -dist);
+  _cp.x += cy * 1.0; _cp.z += -sy * 1.0; _cp.y += 0.35;      // over the right shoulder
+  // looking up pulls the camera down behind you: keep it above your floor and closer in
+  const floorY = owner.pos.y + 0.45;
+  if (_cp.y < floorY) { const k = (_head.y - floorY) / Math.max(0.01, _head.y - _cp.y); _cp.lerpVectors(_head, _cp, Math.max(0.25, k)); _cp.y = Math.max(_cp.y, floorY); }
+  v.cam.position.copy(_cp);
+  v.target.copy(_cp).addScaledVector(_look, 40);
+  v.cam.lookAt(v.target);
+  v.dist = dist;
+  v.sunAt = v.head;
+}
+function finishView(v, pts, dt) {
   // floors above whoever this view follows vanish, in this view only
   const topY = v.kind === 'overview' || !pts.length ? Infinity : Math.max(...pts.map(p => p.pos.y));
   for (let L = 0; L < LAYERS; L++) {
@@ -2341,8 +2456,9 @@ function renderViews() {
     v.cam.aspect = Math.max(0.1, r.w / Math.max(1, r.h)); v.cam.updateProjectionMatrix();
     renderer.setViewport(r.x, H - r.y - r.h, r.w, r.h);
     if (multi) renderer.setScissor(r.x, H - r.y - r.h, r.w, r.h);
-    sun.position.set(v.target.x + 9, v.target.y + 22, v.target.z + 11);
-    sun.target.position.copy(v.target); sun.target.updateMatrixWorld();
+    const sa = v.sunAt || v.target;
+    sun.position.set(sa.x + 9, sa.y + 22, sa.z + 11);
+    sun.target.position.copy(sa); sun.target.updateMatrixWorld();
     applyLayers(v);
     renderer.render(scene, v.cam);
   });
@@ -2493,7 +2609,7 @@ function toggleCpu() {
 }
 
 function toLobby() {
-  playTheme(); clearGore();
+  playTheme(); clearGore(); if (typeof unlockMouse === 'function') unlockMouse();
   state = 'lobby'; paused = false; players = [];
   show('#lobby', true); show('#hud', false); show('#pause', false); show('#result', false);
   bigText(''); $('#confetti').innerHTML = '';
@@ -2515,7 +2631,7 @@ function beginRoundUI() {
   players.forEach(p => { p.view = null; });
   setSplit(false);
   eliminated = []; winners = []; roundT = 0; cdT = 3.2; lastCd = -1; paused = false; overReady = false; lastByTime = false;
-  mainView.yaw = 0; mainView.pitch = DEF_PITCH; mainView.zoom = 1; introT = 0;
+  mainView.yaw = 0; mainView.pitch = DEF_PITCH; mainView.zoom = 1; mainView.aimInit = false; introT = 0;
   state = 'intro';
   show('#lobby', false); show('#hud', true); show('#pause', false); show('#result', false); show('#timer', false);
   $('#confetti').innerHTML = ''; bigText('');
@@ -2550,7 +2666,9 @@ function startRound() {
 }
 
 let lastByTime = false;
+const unlockMouse = () => { try { if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } catch (e) {} MOUSE.down = false; };
 function endRound(win, byTime) {
+  unlockMouse();
   state = 'over'; overT = 0; overReady = false; lastByTime = !!byTime;
   winners = win ? (Array.isArray(win) ? win : [win]) : [];
   renderHud(); bigText(byTime ? 'TIME!' : '', 'go');
@@ -2955,11 +3073,23 @@ window.addEventListener('pointerdown', initAudio);
 {
   const cv = $('#game'); let drag = null;
   cv.addEventListener('pointerdown', e => {
-    if (state === 'play' && e.pointerType === 'mouse' && e.button === 0) {
-      const v = viewAt(e.clientX, e.clientY), owner = aimOwner(v); if (owner) { MOUSE.down = true; MOUSE.player = owner; }
+    if (e.pointerType !== 'mouse' || e.button !== 0 || !(state === 'play' || state === 'countdown')) return;
+    const v = document.pointerLockElement === cv && MOUSE.view ? MOUSE.view : viewAt(e.clientX, e.clientY), owner = aimOwner(v);
+    if (!owner) return;
+    MOUSE.view = v;
+    if (document.pointerLockElement !== cv && cv.requestPointerLock) {
+      try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) {}
+      if (!MOUSE.told) { MOUSE.told = true; toast('Mouse locked for aiming. Click to shoot, Esc to let go.'); }
     }
+    if (state === 'play') { MOUSE.down = true; MOUSE.player = owner; }
   });
-  cv.addEventListener('pointerdown', e => { if (state === 'lobby') return; drag = { x: e.clientX, y: e.clientY, v: viewAt(e.clientX, e.clientY) }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} });
+  document.addEventListener('mousemove', e => {
+    if (document.pointerLockElement !== cv || !MOUSE.view || state === 'lobby') return;
+    const v = views.includes(MOUSE.view) ? MOUSE.view : mainView;
+    v.yaw -= (e.movementX || 0) * 0.0026; v.pitch += (e.movementY || 0) * 0.0022; clampView(v);
+  });
+  window.addEventListener('pointerup', () => { MOUSE.down = false; });
+  cv.addEventListener('pointerdown', e => { if (state === 'lobby' || document.pointerLockElement === cv) return; drag = { x: e.clientX, y: e.clientY, v: viewAt(e.clientX, e.clientY) }; try { cv.setPointerCapture(e.pointerId); } catch (err) {} });
   cv.addEventListener('pointermove', e => {
     if (!drag) return;
     const v = views.includes(drag.v) ? drag.v : mainView;
@@ -3068,7 +3198,7 @@ function frame(now) {
     } else if (state === 'play') {
       if (!guest) roundT += dt;
       syncGrabs();
-      const inputs = players.map(p => { if (p.bot) p.bot.t -= dt; return p.alive && !p.remote ? readInput(p) : null; });
+      const inputs = players.map(p => { if (p.bot) { p.bot.t -= dt; p.bot.gunT -= dt; } return p.alive && !p.remote ? readInput(p) : null; });
       // knocked-out players press jump to switch who their camera watches
       players.forEach(p => {
         if (p.alive || p.remote || !isHuman(p)) return;
