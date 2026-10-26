@@ -1748,7 +1748,11 @@ function stepPlayer(p, inp, dt) {
   p.prevJump = inp.jump; p.prevDive = inp.dive;
   p.grabCd = Math.max(0, p.grabCd - dt);
   p.fireCd = Math.max(0, (p.fireCd || 0) - dt); p.fireT = Math.max(0, (p.fireT || 0) - dt); p.hitT = Math.max(0, (p.hitT || 0) - dt);
-  if (inp.fire && p.fireCd <= 0 && state === 'play') shoot(p);
+  // one shot per squeeze: a press fires once; holding does nothing more. A press made during the
+  // short cooldown is kept for a moment and fires as soon as the gun is ready
+  if (inp.fire && !p.prevFire) p.firePend = 0.15;
+  p.prevFire = inp.fire;
+  if (p.firePend > 0) { p.firePend -= dt; if (p.fireCd <= 0 && state === 'play') { p.firePend = 0; shoot(p); } }
 
   // grab
   if (inp.grab && !p.grab && !p.diving && p.grabCd <= 0) {
@@ -1860,7 +1864,7 @@ function eliminate(p) {
 // looks over the shoulder. Shots are fast tracers; a hit stuns the target so they drop through
 // their floor. There's no health: the only way to die is the pit.
 const TILE_UNDER = 0.46;   // the underside of a tile, below its walking surface
-const FIRE_CD = 0.3, BULLET_SPEED = 55, BULLET_LIFE = 0.95, HIT_R = 0.62, KNOCK = 6.5;
+const FIRE_CD = 0.22, BULLET_SPEED = 55, BULLET_LIFE = 0.95, HIT_R = 0.62, KNOCK = 6.5;
 // a bright white-hot core inside a glowing sleeve in the shooter's color, a long streak behind it,
 // a big muzzle flash, and a burst wherever it lands so you can see exactly where you're hitting
 const TRACERS = [], IMPACTS = [];
