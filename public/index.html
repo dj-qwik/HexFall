@@ -357,7 +357,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
       <details class="howto">
         <summary>Controls</summary>
         <div class="controls">
-          <div class="ctl"><strong>Controller</strong><kbd class="k">A</kbd> join / jump <kbd class="k">X</kbd> dive <kbd class="k">RB</kbd> grab <kbd class="k">RT</kbd> shoot <kbd class="k">LT</kbd> aim <kbd class="k">Right stick</kbd> look <kbd class="k">Start</kbd> pause</div>
+          <div class="ctl"><strong>Controller</strong><kbd class="k">A</kbd> join / jump <kbd class="k">X</kbd> dive <kbd class="k">B</kbd> grab <kbd class="k">RT</kbd> shoot <kbd class="k">LT</kbd> aim <kbd class="k">RB</kbd>/<kbd class="k">LB</kbd> zoom in / out <kbd class="k">Right stick</kbd> look <kbd class="k">Start</kbd> pause</div>
           <div class="ctl"><strong>Keyboard 1</strong><kbd class="k">WASD</kbd> move <kbd class="k">Space</kbd> join / jump <kbd class="k">Shift</kbd> dive <kbd class="k">E</kbd> grab <kbd class="k">Q</kbd> shoot</div>
           <div class="ctl"><strong>Keyboard 2</strong><kbd class="k">Arrows</kbd> move <kbd class="k">/</kbd> join / jump <kbd class="k">.</kbd> dive <kbd class="k">,</kbd> grab <kbd class="k">L</kbd> shoot</div>
           <div class="ctl"><strong>Anywhere</strong><kbd class="k">F</kbd> fullscreen <kbd class="k">M</kbd> music <kbd class="k">B</kbd> / <kbd class="k">Backspace</kbd> leave <kbd class="k">C</kbd> / <kbd class="k">Y</kbd> CPU fill <kbd class="k">V</kbd> / <kbd class="k">X</kbd> CPU skill</div>
@@ -1691,7 +1691,7 @@ function readKind(p) {
       if (Math.hypot(x, z) < 0.22) { x = 0; z = 0; }
       if (btn(gp, 14)) x = -1; if (btn(gp, 15)) x = 1; if (btn(gp, 12)) z = -1; if (btn(gp, 13)) z = 1;
       inp.mx = x; inp.mz = z;
-      inp.jump = btn(gp, 0); inp.dive = btn(gp, 2) || btn(gp, 1); inp.grab = btn(gp, 5) || btn(gp, 4); inp.fire = btn(gp, 7);
+      inp.jump = btn(gp, 0); inp.dive = btn(gp, 2); inp.grab = btn(gp, 1); inp.fire = btn(gp, 7);   // A jump, X dive, B grab, RT shoot
     }
   }
   const l = Math.hypot(inp.mx, inp.mz); if (l > 1) { inp.mx /= l; inp.mz /= l; }
@@ -2443,6 +2443,8 @@ function padLook(dt) {
     if (Math.abs(ry) > 0.15) v.pitch += Math.sign(ry) * Math.pow(Math.abs(ry), 1.6) * 2.2 * dt;
     const lt = gp.buttons[6] ? gp.buttons[6].value : 0, rt = gp.buttons[7] ? gp.buttons[7].value : 0;
     v.aimHeld = lt > 0.15;  // LT: hold to aim (zooms in); RT fires
+    if (btn(gp, 5)) v.zoom *= Math.exp(-0.9 * dt);   // RB: zoom in
+    if (btn(gp, 4)) v.zoom *= Math.exp(0.9 * dt);    // LB: zoom out
     clampView(v);
   });
 }
