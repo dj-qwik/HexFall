@@ -353,7 +353,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
           <div class="actions"><button class="btn small" id="leaveBtn" type="button">Leave room</button></div>
         </div>
       </div>
-      <p class="tip"><b>PRO TIP</b>Hop, don't run. Ten shots kills, but the pit kills instantly. Shoot them off the edge.</p>
+      <p class="tip"><b>PRO TIP</b>Hop, don't run. Five shots kills, but the pit kills instantly. Shoot them off the edge.</p>
       <details class="howto">
         <summary>Controls</summary>
         <div class="controls">
@@ -413,7 +413,7 @@ body.touchmode #big span{font-size:clamp(64px,22vw,150px);}
       <button class="tb fire" id="tFire" type="button" aria-label="Shoot">Shoot</button>
     </div>
     <button class="tpause" id="tPause" type="button" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
-    <p class="thint" id="tHint">Left thumb moves · drag right side to aim · 10 hits and you're dead</p>
+    <p class="thint" id="tHint">Left thumb moves · drag right side to aim · 5 hits and you're dead</p>
   </div>
 </div>
 
@@ -458,7 +458,7 @@ scene.add(sun); scene.add(sun.target);
 
 /* ================= arena ================= */
 const S = 1.6, N = 6, LAYERS = 6, GAP = 5, SQ3 = Math.sqrt(3);
-const FALL_DELAY = 0.85, BOTTOM_DELAY = 1.7, DROP_T = 0.3, TIME_LIMIT = 180;
+const FALL_DELAY = 1.12, BOTTOM_DELAY = 2.24, DROP_T = 0.3, TIME_LIMIT = 180;
 const layerY = L => -L * GAP;
 const SLIME_Y = layerY(LAYERS - 1) - 5;
 const LAYER_COLORS = [0xa760f0, 0x4ea6ff, 0xffc63a, 0xff74b4, 0x4fd59b, 0xff8f45, 0x47d4e6, 0xc6e84a];
@@ -1025,10 +1025,10 @@ const HURT_WORDS = [
 ];
 // famous last words after the tenth bullet
 const SHOT_DEAD_WORDS = [
-  'Wow. Real mature.', "I'll haunt your WiFi.", "Respawn? ...There's no respawn?!", 'Ten shots? You needed TEN?',
+  'Wow. Real mature.', "I'll haunt your WiFi.", "Respawn? ...There's no respawn?!", 'Five shots? You needed FIVE?',
   'GG. You still suck.', 'I was carrying this team!', 'Lag! That was LAG!', 'Bury me with my grillz.',
   "I'm telling everybody you camped.", "Fine. I didn't wanna play anyway.", "Bet you can't do that again.", 'Cool. Cool cool cool.',
-  'Death by a thousand... ten cuts.', 'Tell the dogs I said hi.', 'My mixtape was gonna be fire!', 'This game is rigged!',
+  'Death by a thousand... five cuts.', 'Tell the dogs I said hi.', 'My mixtape was gonna be fire!', 'This game is rigged!',
   'You aim like my grandma. And she got me.', 'Uninstalling.', "Worth it. Wait, no it wasn't.", 'I died how I lived: getting shot.',
   "At least the dogs won't get me.", 'Screenshot my K/D before you laugh.', 'Tell my boxers they were loved.', 'I want a rematch. And a lawyer.',
   "Well, that's just fuckin' great.", "You're lucky I was lagging.", "I'm not mad. I'm just disappointed.", 'Shoulda stayed home.',
@@ -1833,17 +1833,45 @@ function eliminate(p) {
 
 /* ----- guns ----- */
 // Everyone aims with their camera: a crosshair sits in the middle of their view and the camera
-// looks over the shoulder. Shots are fast tracers; a hit shoves the target and takes 1 of 10 health.
-// The tenth hit kills. Falling into the pit still kills straight away.
-const MAX_HP = 10, FIRE_CD = 0.3, BULLET_SPEED = 70, BULLET_LIFE = 0.75, HIT_R = 0.62, KNOCK = 6.5;
-const TRACERS = [];
+// looks over the shoulder. Shots are fast tracers; a hit shoves the target and takes 1 of 5 health.
+// The fifth hit kills. Falling into the pit still kills straight away.
+const MAX_HP = 5, FIRE_CD = 0.3, BULLET_SPEED = 55, BULLET_LIFE = 0.95, HIT_R = 0.62, KNOCK = 6.5;
+// a bright white-hot core inside a glowing sleeve in the shooter's color, a long streak behind it,
+// a big muzzle flash, and a burst wherever it lands so you can see exactly where you're hitting
+const TRACERS = [], IMPACTS = [];
 {
-  const g = new THREE.CylinderGeometry(0.035, 0.035, 1.3, 6); g.rotateX(Math.PI / 2);
-  const m = new THREE.MeshBasicMaterial({ color: 0xfff1a0 }), fg = new THREE.SphereGeometry(0.16, 10, 8), fm = new THREE.MeshBasicMaterial({ color: 0xffc23a });
+  const core = new THREE.CylinderGeometry(0.075, 0.075, 2.4, 8); core.rotateX(Math.PI / 2); core.translate(0, 0, -1.0);
+  const glow = new THREE.CylinderGeometry(0.2, 0.05, 4.2, 10); glow.rotateX(Math.PI / 2); glow.translate(0, 0, -2.0);
+  const head = new THREE.SphereGeometry(0.17, 12, 10), fg = new THREE.SphereGeometry(0.3, 12, 10);
+  const coreM = new THREE.MeshBasicMaterial({ color: 0xffffee }), fm = new THREE.MeshBasicMaterial({ color: 0xffd25a, transparent: true, opacity: 0.9, depthWrite: false });
   for (let i = 0; i < 48; i++) {
-    const mesh = new THREE.Mesh(g, m); mesh.visible = false; scene.add(mesh);
+    const mesh = new THREE.Group();
+    const glowM = new THREE.MeshBasicMaterial({ color: 0xffd25a, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
+    mesh.add(new THREE.Mesh(core, coreM)); mesh.add(new THREE.Mesh(glow, glowM)); mesh.add(new THREE.Mesh(head, coreM));
+    mesh.visible = false; scene.add(mesh);
     const flash = new THREE.Mesh(fg, fm); flash.visible = false; scene.add(flash);
-    TRACERS.push({ mesh, flash, pos: new THREE.Vector3(), dir: new THREE.Vector3(), life: 0, fl: 0, owner: null, live: false });
+    TRACERS.push({ mesh, glowM, flash, pos: new THREE.Vector3(), dir: new THREE.Vector3(), life: 0, fl: 0, owner: null, live: false });
+  }
+  const ig = new THREE.SphereGeometry(0.35, 14, 10), rg = new THREE.TorusGeometry(0.5, 0.06, 6, 24);
+  for (let i = 0; i < 24; i++) {
+    const m = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending });
+    const ball = new THREE.Mesh(ig, m), ring = new THREE.Mesh(rg, m); ring.rotation.x = Math.PI / 2;
+    ball.visible = ring.visible = false; scene.add(ball); scene.add(ring);
+    IMPACTS.push({ ball, ring, m, life: 0 });
+  }
+}
+let impactI = 0;
+function impact(x, y, z, color, onFloor) {
+  const I = IMPACTS[impactI++ % IMPACTS.length]; I.life = 0.35; I.m.color.set(color); I.m.opacity = 1;
+  I.ball.visible = true; I.ball.position.set(x, y, z); I.ball.scale.setScalar(0.4);
+  I.ring.visible = !!onFloor; I.ring.position.set(x, y + 0.04, z); I.ring.scale.setScalar(0.3);
+}
+function updateImpacts(dt) {
+  for (const I of IMPACTS) {
+    if (I.life <= 0) continue;
+    I.life -= dt; const k = 1 - I.life / 0.35;
+    I.ball.scale.setScalar(0.4 + k * 1.1); I.ring.scale.setScalar(0.3 + k * 2.2); I.m.opacity = Math.max(0, 1 - k);
+    if (I.life <= 0) { I.ball.visible = I.ring.visible = false; }
   }
 }
 let tracerI = 0, shotId = 0;
@@ -1870,7 +1898,8 @@ function aimPoint(p, out) {
 function spawnTracer(owner, o, d, live, rec) {
   const T = TRACERS[tracerI++ % TRACERS.length];
   T.rec = rec || null;
-  T.pos.copy(o); T.dir.copy(d); T.life = BULLET_LIFE; T.fl = 0.06; T.owner = owner; T.live = live;
+  T.pos.copy(o); T.dir.copy(d); T.life = BULLET_LIFE; T.fl = 0.07; T.owner = owner; T.live = live;
+  T.color = owner ? owner.def.css : '#ffd25a'; T.glowM.color.set(T.color); T.flash.material.color.set(T.color);
   T.mesh.visible = true; T.mesh.position.copy(o); T.mesh.lookAt(o.x + d.x, o.y + d.y, o.z + d.z);
   T.flash.visible = true; T.flash.position.copy(o);
 }
@@ -1934,15 +1963,28 @@ function updateTracers(dt) {
       players.forEach(q => { if (q === T.owner || !q.alive) return; const t = raySphere(T.pos, T.dir, chestOf(q, _c2), HIT_R); if (t >= 0 && t < ht) { ht = t; hit = q; } });
       if (hit) {
         T.life = 0; T.mesh.visible = false;
+        impact(T.pos.x + T.dir.x * ht, T.pos.y + T.dir.y * ht, T.pos.z + T.dir.z * ht, '#ff3b3b', false);
         if (simulatesHere(hit)) takeHit(hit, T.dir.x, T.dir.z, T.owner);
         else if (T.rec) T.rec[7] = hit.i;
         if (T.owner && !T.owner.remote) { const v = viewOf(T.owner); if (v && v.cross) { v.cross.classList.remove('hit'); void v.cross.offsetWidth; v.cross.classList.add('hit'); } }
         continue;
       }
     }
+    // stops on the first solid tile it meets, with a burst on the floor
+    const y0 = T.pos.y, y1 = y0 + T.dir.y * step;
+    if (T.dir.y < 0) {
+      let stopped = false;
+      for (let L = 0; L < LAYERS && !stopped; L++) {
+        const yl = layerY(L); if (!(y0 >= yl && y1 < yl)) continue;
+        const t = (yl - y0) / T.dir.y, x = T.pos.x + T.dir.x * t, z = T.pos.z + T.dir.z * t, i = tileAt(L, x, z);
+        if (i >= 0 && layers[L].state[i] < 2) { impact(x, yl, z, T.color, true); stopped = true; }
+      }
+      if (stopped) { T.life = 0; T.mesh.visible = false; continue; }
+    }
     T.pos.addScaledVector ? T.pos.addScaledVector(T.dir, step) : T.pos.add(T.dir.clone().multiplyScalar(step));
     T.mesh.position.copy(T.pos);
-    if (T.life <= 0 || T.pos.y < SLIME_Y) { T.life = 0; T.mesh.visible = false; }
+    if (T.pos.y < groundY(T.pos.x, T.pos.z)) { impact(T.pos.x, groundY(T.pos.x, T.pos.z), T.pos.z, T.color, true); T.life = 0; T.mesh.visible = false; continue; }
+    if (T.life <= 0) { T.life = 0; T.mesh.visible = false; }
   }
 }
 // shots from other online players: draw their tracers, and take the hits they landed on us
@@ -1990,10 +2032,10 @@ function updateCrosses() {
 // around it, planning for the floor below), how patiently it hops, how fast it reacts, and how much
 // it wants to win (hunting, shoving and grabbing other players).
 const SKILLS = [
-  { name: 'Easy',     desc: 'Slow to react, easily cornered, and can barely shoot straight.',             noise: [1.0, 1.6], hop: [0.45, 0.6], think: [0.28, 0.2], reach: 5,  look: 0.3, aggr: 0.03, slip: 0.05, react: 0.3,  smart: false, plan: false, patience: 0, margin: 0.2, gunRate: 3.4, spread: 0.24, lead: false, range: 14 },
-  { name: 'Normal',   desc: 'Keeps moving, checks its landings and takes the odd potshot.',                 noise: [0.7, 1.1], hop: [0.7, 0.85], think: [0.14, 0.1], reach: 7,  look: 0.5, aggr: 0.06, slip: 0,    react: 0.26, smart: true,  plan: false, patience: 0.35, margin: 0.12, gunRate: 2.4, spread: 0.12, lead: false, range: 18 },
-  { name: 'Hard',     desc: 'Saves floor, plans its drops, and shoots back often.',   noise: [0.12, 0.3], hop: [0.93, 0.98], think: [0.07, 0.05], reach: 11, look: 1.1, aggr: 0.16, slip: 0,    react: 0.16, smart: true,  plan: true,  patience: 0.85, margin: 0.08, gunRate: 1.5, spread: 0.06, lead: false, range: 24 },
-  { name: 'Ruthless', desc: 'Near-perfect hopping, hunts you down, and almost never misses.', noise: [0.02, 0.08], hop: [1, 1],       think: [0.04, 0.03], reach: 99, look: 1.5, aggr: 0.4,  slip: 0,    react: 0.1,  smart: true,  plan: true,  patience: 1, margin: 0.05, gunRate: 0.95, spread: 0.012, lead: true, range: 34 },
+  { name: 'Easy',     desc: 'Slow to react, easily cornered, and can barely shoot straight.',             noise: [1.0, 1.6], hop: [0.45, 0.6], think: [0.28, 0.2], reach: 5,  look: 0.3, aggr: 0.03, slip: 0.05, react: 0.3,  smart: false, plan: false, patience: 0, margin: 0.2, gunRate: 4.2, spread: 0.24, lead: false, range: 14 },
+  { name: 'Normal',   desc: 'Keeps moving, checks its landings and takes the odd potshot.',                 noise: [0.7, 1.1], hop: [0.7, 0.85], think: [0.14, 0.1], reach: 7,  look: 0.5, aggr: 0.06, slip: 0,    react: 0.26, smart: true,  plan: false, patience: 0.35, margin: 0.12, gunRate: 3.2, spread: 0.12, lead: false, range: 18 },
+  { name: 'Hard',     desc: 'Saves floor, plans its drops, and shoots back often.',   noise: [0.12, 0.3], hop: [0.93, 0.98], think: [0.07, 0.05], reach: 11, look: 1.1, aggr: 0.16, slip: 0,    react: 0.16, smart: true,  plan: true,  patience: 0.85, margin: 0.08, gunRate: 2.1, spread: 0.06, lead: false, range: 24 },
+  { name: 'Ruthless', desc: 'Near-perfect hopping, hunts you down, and almost never misses.', noise: [0.02, 0.08], hop: [1, 1],       think: [0.04, 0.03], reach: 99, look: 1.5, aggr: 0.4,  slip: 0,    react: 0.1,  smart: true,  plan: true,  patience: 1, margin: 0.05, gunRate: 1.3, spread: 0.012, lead: true, range: 34 },
 ];
 let cpuSkill = 1;
 try { const v = parseInt(localStorage.getItem('hexfall.cpuSkill'), 10); if (v >= 0 && v < SKILLS.length) cpuSkill = v; } catch (e) {}
@@ -2486,7 +2528,7 @@ function updateTags() {
       el.hidden = false;
       el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
       const hp = p.hp == null ? MAX_HP : p.hp, bar = el.querySelector('.hp');
-      if (bar && bar.dataset.hp !== String(hp)) { bar.dataset.hp = String(hp); bar.hidden = hp >= MAX_HP; bar.querySelector('u').style.width = (hp / MAX_HP * 100) + '%'; bar.classList.toggle('low', hp <= 3); }
+      if (bar && bar.dataset.hp !== String(hp)) { bar.dataset.hp = String(hp); bar.hidden = hp >= MAX_HP; bar.querySelector('u').style.width = (hp / MAX_HP * 100) + '%'; bar.classList.toggle('low', hp <= 2); }
     });
   });
 }
@@ -3212,7 +3254,7 @@ function frame(now) {
         collide();
         updateTiles(h);
       }
-      updateTracers(dt);
+      updateTracers(dt); updateImpacts(dt);
       const alive = players.filter(p => p.alive);
       const remain = TIME_LIMIT - roundT;
       if (remain <= 30) { show('#timer', true); $('#timer').textContent = Math.max(0, Math.ceil(remain)) + 's'; }
