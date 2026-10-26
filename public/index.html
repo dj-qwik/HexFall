@@ -1871,7 +1871,7 @@ const TILE_UNDER = 0.46;   // the underside of a tile, below its walking surface
 const FIRE_CD = 0.22, BULLET_SPEED = 55, BULLET_LIFE = 0.95, HIT_R = 0.62, KNOCK = 6.5;
 // a bright white-hot core inside a glowing sleeve in the shooter's color, a long streak behind it,
 // a big muzzle flash, and a burst wherever it lands so you can see exactly where you're hitting
-const TRACERS = [], IMPACTS = [];
+const TRACERS = [], IMPACTS = [], Z_AXIS = new THREE.Vector3(0, 0, 1), _tq = new THREE.Vector3();
 {
   const core = new THREE.CylinderGeometry(0.075, 0.075, 2.4, 8); core.rotateX(Math.PI / 2); core.translate(0, 0, -1.0);
   const glow = new THREE.CylinderGeometry(0.2, 0.05, 4.2, 10); glow.rotateX(Math.PI / 2); glow.translate(0, 0, -2.0);
@@ -1940,7 +1940,9 @@ function spawnTracer(owner, o, d, live, rec) {
   T.rec = rec || null;
   T.pos.copy(o); T.dir.copy(d); T.life = BULLET_LIFE; T.fl = 0.07; T.owner = owner; T.live = live;
   T.color = owner ? owner.def.css : '#ffd25a'; T.glowM.color.set(T.color); T.flash.material.color.set(T.color);
-  T.mesh.visible = true; T.mesh.position.copy(o); T.mesh.lookAt(o.x + d.x, o.y + d.y, o.z + d.z);
+  // point it along its flight with a rotation from +z (lookAt breaks for straight up or down)
+  T.mesh.visible = true; T.mesh.position.copy(o); T.mesh.quaternion.setFromUnitVectors(Z_AXIS, _tq.copy(d).normalize());
+  T.trav = 0; T.mesh.scale.set(1, 1, 0.04);   // the streak grows out of the muzzle instead of starting inside the shooter
   T.flash.visible = true; T.flash.position.copy(o);
 }
 function muzzle(p, aim) {
@@ -2033,6 +2035,7 @@ function updateTracers(dt) {
     }
     T.pos.addScaledVector ? T.pos.addScaledVector(T.dir, step) : T.pos.add(T.dir.clone().multiplyScalar(step));
     T.mesh.position.copy(T.pos);
+    T.trav += step; T.mesh.scale.z = Math.min(1, 0.04 + T.trav / 4.2);
     if (T.pos.y < groundY(T.pos.x, T.pos.z)) { impact(T.pos.x, groundY(T.pos.x, T.pos.z), T.pos.z, T.color, true); T.life = 0; T.mesh.visible = false; continue; }
     if (T.life <= 0) { T.life = 0; T.mesh.visible = false; }
   }
