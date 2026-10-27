@@ -28,3 +28,9 @@ Nobody needs a Claude or Render account to play.
 - **First load can take about a minute.** On the free plan Render puts the server to sleep after 15 minutes with nobody connected. The first visit wakes it up; after that it's instant.
 - **Updating the game.** Replace `public/index.html` in the GitHub repo with a new version and commit. Render redeploys automatically in a minute or two. Anyone in a match at that moment gets disconnected.
 - **Limits.** Up to 8 connections per room (4 players plus spectators). Render's free plan includes 750 hours a month, enough to keep this one service running all month.
+
+## Testing without a browser
+
+`node tools/sim.js public/index.html` runs the whole game headless (a stand-in for three.js and the
+page), joins a keyboard player, plays about 40 seconds and reports any runtime errors. It can't show
+what the game looks like, but it catches crashes and is easy to extend with checks of your own.
